@@ -12,7 +12,7 @@
   <a href="https://github.com/Sibuxiangx/LoveACE/actions/workflows/build-apk.yml"><img alt="Android Build" src="https://img.shields.io/github/actions/workflow/status/Sibuxiangx/LoveACE/build-apk.yml?branch=main&label=Android%20Release&style=flat-square"></a>
   <img alt="Android" src="https://img.shields.io/badge/Android-1.1.11-3DDC84?style=flat-square&logo=android&logoColor=white">
   <img alt="iOS" src="https://img.shields.io/badge/iOS-17%2B-000000?style=flat-square&logo=apple&logoColor=white">
-  <img alt="License" src="https://img.shields.io/badge/license-private-lightgrey?style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square">
 </p>
 
 ---
@@ -112,6 +112,12 @@ cd LoveACE
 - 不提交 `.env`、`local.properties`、keystore、证书、provisioning profile 等敏感文件。
 - Android release 签名只在 GitHub Actions 中通过 Secrets 还原。
 - 发布工具所需 S3/CDN 凭据只通过环境变量或本地 ignored `.env` 提供。
+
+## 许可证
+
+本仓库源码基于 [Apache License 2.0](LICENSE) 开源。
+
+项目名称、Logo、图标、截图、捐赠二维码等品牌与视觉资源的使用不由 Apache License 2.0 授权；如需使用相关品牌资源，请先取得授权。详见 [NOTICE](NOTICE)。
 
 ## 备注
 
