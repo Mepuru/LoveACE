@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="200dp"
+    android:viewportWidth="400"
+    android:viewportHeight="200">
+
+    <!-- 校园建筑天际线 — 矢量化线条插画 -->
+
+    <!-- 主教学楼（中央塔楼） -->
+    <path
+        android:pathData="M180,200 L180,70 L185,65 L190,55 L195,50 L200,45 L205,50 L210,55 L215,65 L220,70 L220,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="1.2"
+        android:fillColor="#00000000" />
+    <!-- 塔楼窗户 -->
+    <path
+        android:pathData="M192,80 L192,90 M200,75 L200,90 M208,80 L208,90"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000" />
+    <!-- 塔楼横线 -->
+    <path
+        android:pathData="M183,90 L217,90 M183,110 L217,110 M183,130 L217,130"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+
+    <!-- 左侧图书馆 -->
+    <path
+        android:pathData="M100,200 L100,110 L105,105 L150,105 L155,110 L155,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="1.0"
+        android:fillColor="#00000000" />
+    <!-- 图书馆柱子 -->
+    <path
+        android:pathData="M110,110 L110,200 M120,110 L120,200 M130,110 L130,200 M140,110 L140,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+    <!-- 图书馆三角顶 -->
+    <path
+        android:pathData="M105,105 L127,88 L150,105"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000" />
+
+    <!-- 右侧实验楼 -->
+    <path
+        android:pathData="M240,200 L240,95 L310,95 L310,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="1.0"
+        android:fillColor="#00000000" />
+    <!-- 实验楼窗户网格 -->
+    <path
+        android:pathData="M250,105 L250,115 L260,115 L260,105 Z M270,105 L270,115 L280,115 L280,105 Z M290,105 L290,115 L300,115 L300,105 Z"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M250,125 L250,135 L260,135 L260,125 Z M270,125 L270,135 L280,135 L280,125 Z M290,125 L290,135 L300,135 L300,125 Z"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M250,145 L250,155 L260,155 L260,145 Z M270,145 L270,155 L280,155 L280,145 Z M290,145 L290,155 L300,155 L300,145 Z"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.5"
+        android:fillColor="#00000000" />
+
+    <!-- 远处小楼（左） -->
+    <path
+        android:pathData="M40,200 L40,140 L80,140 L80,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.7"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M45,140 L60,128 L75,140"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+
+    <!-- 远处小楼（右） -->
+    <path
+        android:pathData="M330,200 L330,130 L370,130 L370,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.7"
+        android:fillColor="#00000000" />
+    <!-- 小楼窗户 -->
+    <path
+        android:pathData="M340,140 L340,150 L350,150 L350,140 Z M355,140 L355,150 L365,150 L365,140 Z"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.4"
+        android:fillColor="#00000000" />
+
+    <!-- 连接走廊 -->
+    <path
+        android:pathData="M155,160 L180,160 M220,160 L240,160"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+
+    <!-- 树木点缀 -->
+    <path
+        android:pathData="M25,200 Q25,170 15,175 Q25,155 35,175 Q25,170 25,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M165,200 Q165,175 158,178 Q165,162 172,178 Q165,175 165,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M385,200 Q385,172 378,176 Q385,158 392,176 Q385,172 385,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.6"
+        android:fillColor="#00000000" />
+
+    <!-- 地面线 -->
+    <path
+        android:pathData="M0,200 L400,200"
+        android:strokeColor="#455A64"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000" />
+
+</vector>

@@ -1,0 +1,48 @@
+# AGENTS.md
+
+## Working flow
+- Start by reading the relevant Swift/config files, then restate the requirement, make a short task list, and confirm with the user before non-trivial edits.
+- Expect iterative direction changes; if the user interjects, pause, update the plan, and continue with the smallest correct diff.
+- Preserve user work: run `git status --short` before edits, do not revert unrelated changes, and do not commit unless explicitly asked.
+
+## Project map
+- Xcode project only: `loveaceios.xcodeproj`; schemes/targets are `loveaceios` and `loveaceiosWidget`.
+- Main app: bundle `cn.linota.loveace`, display name `彩带小工具`; widget: bundle `cn.linota.loveace.widget`; team `2PYK4BY5P6`.
+- App and widget share `group.cn.linota.loveace`; widget data bridge is `Shared/WidgetModels.swift` via `UserDefaults(suiteName:)`.
+- SwiftUI flow: `loveaceiosApp.swift` creates `AuthViewModel` -> `ContentView` restores/routes auth -> `MainTabView` tabs (`HomeView`, `AACView`, `MoreView`, `SettingsView`).
+- Services live in `loveaceios/Service` and are wired in `AuthViewModel.initServices(_:)`; login/session networking is `AUFEConnection` + `HTTPClient`.
+- Reuse `loveaceios/Components/DesignSystem.swift` (`glassCard`, `glassInteractiveCard`, `GlassBadge`, etc.) for UI instead of ad-hoc styling.
+- SPM dependency is SwiftSoup, resolved in `loveaceios.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
+
+## Build and simulator checks
+- Inspect schemes with `xcodebuild -list -project loveaceios.xcodeproj`.
+- Debug simulator build:
+  ```sh
+  xcodebuild -project loveaceios.xcodeproj -scheme loveaceios -configuration Debug -destination 'generic/platform=iOS Simulator' build
+  ```
+- For simulator install/launch, build to a deterministic DerivedData path first:
+  ```sh
+  xcodebuild -project loveaceios.xcodeproj -scheme loveaceios -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData build
+  xcrun simctl terminate booted cn.linota.loveace || true
+  xcrun simctl install booted build/DerivedData/Build/Products/Debug-iphonesimulator/loveaceios.app
+  xcrun simctl launch booted cn.linota.loveace
+  ```
+- There is no test target; verify with focused `xcodebuild` plus simulator/manual checks unless tests are added.
+- A duplicate build-file warning for `Shared/WidgetModels.swift` may appear; do not clean up project settings unless the user asks.
+
+## TestFlight upload
+- If the user asks for TestFlight, ask how to bump version/build first; default to keeping `MARKETING_VERSION` and incrementing `CURRENT_PROJECT_VERSION` for both app and widget.
+- Verify/update all four `CURRENT_PROJECT_VERSION` entries in `loveaceios.xcodeproj/project.pbxproj` before archiving.
+- `ExportOptions.plist` is configured for App Store Connect upload: `method=app-store-connect`, `destination=upload`, team `2PYK4BY5P6`, automatic signing, symbols on.
+- Archive/upload from repo root:
+  ```sh
+  mkdir -p build/TestFlight
+  ARCHIVE_PATH="build/TestFlight/loveaceios-$(date +%Y%m%d-%H%M%S).xcarchive"
+  xcodebuild -project loveaceios.xcodeproj -scheme loveaceios -configuration Release -destination 'generic/platform=iOS' -archivePath "$ARCHIVE_PATH" -allowProvisioningUpdates archive
+  xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportOptionsPlist ExportOptions.plist -exportPath "build/TestFlight/export-$(date +%Y%m%d-%H%M%S)" -allowProvisioningUpdates
+  ```
+- If upload fails with `Failed to Use Accounts`, the local Xcode App Store Connect login likely expired; ask the user to re-login in Xcode Settings > Accounts, then retry the same archive.
+
+## Git/artifact quirks
+- `.gitignore` ignores `build/`, `DerivedData/`, `*.xcarchive`, `*.ipa`, `*.dSYM`, SPM build folders, and Xcode user state.
+- `build/` was previously tracked; treat staged deletions or ignored archives as artifacts and do not restore or commit them unless the user explicitly requests it.

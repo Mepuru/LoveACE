@@ -1,0 +1,25 @@
+.DS_Store
+
+# Local config and secrets
+.env
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+local.properties
+
+# Build outputs
+build/
+**/build/
+.gradle/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM
+
+# IDE user state
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/

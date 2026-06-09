@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">彩带小工具</string>
+    <string name="widget_day_description">课程表 · 单日 — 显示今日课程安排与下节课提醒</string>
+    <string name="widget_week_description">课程表 · 一周 — 课程表页面的迷你缩放视图</string>
+</resources>

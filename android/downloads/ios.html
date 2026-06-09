@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>LoveACE iOS 说明</title>
+    <link rel="icon" type="image/png" href="../tools/publish/favicon.png">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --surface: oklch(99% 0.006 250);
+            --surface-strong: oklch(100% 0.004 250);
+            --ink: oklch(24% 0.045 256);
+            --muted: oklch(53% 0.035 256);
+            --line: oklch(91% 0.018 252);
+            --blue: oklch(56% 0.19 257);
+            --blue-dark: oklch(47% 0.17 258);
+            --blue-soft: oklch(94% 0.035 252);
+            --amber-soft: oklch(94% 0.055 82);
+            --amber-ink: oklch(38% 0.09 65);
+            --shadow: 0 24px 70px color-mix(in oklch, var(--blue) 14%, transparent);
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-2xl: 48px;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 18% 18%, oklch(88% 0.06 252 / 0.65), transparent 30vw),
+                radial-gradient(circle at 84% 0%, oklch(86% 0.07 228 / 0.45), transparent 34vw),
+                linear-gradient(180deg, oklch(97% 0.018 250), var(--surface));
+            display: grid;
+            place-items: center;
+            padding: max(var(--space-lg), env(safe-area-inset-top)) var(--space-md) max(var(--space-lg), env(safe-area-inset-bottom));
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .shell {
+            width: min(100%, 560px);
+            display: grid;
+            gap: var(--space-lg);
+        }
+
+        .panel {
+            background: color-mix(in oklch, var(--surface-strong) 92%, transparent);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            padding: clamp(24px, 6vw, 44px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel::before {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            right: -120px;
+            top: -120px;
+            border-radius: 999px;
+            background: var(--blue-soft);
+        }
+
+        .header {
+            position: relative;
+            display: grid;
+            gap: var(--space-lg);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-wrap {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--blue), oklch(66% 0.14 235));
+            box-shadow: 0 12px 26px color-mix(in oklch, var(--blue) 28%, transparent);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .logo-fallback {
+            display: none;
+            width: 36px;
+            height: 36px;
+            fill: oklch(99% 0.006 250);
+        }
+
+        .brand-text {
+            display: grid;
+            gap: var(--space-xs);
+        }
+
+        .eyebrow {
+            color: var(--blue-dark);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            max-width: 11ch;
+            font-size: clamp(34px, 9vw, 56px);
+            line-height: 0.95;
+            letter-spacing: -0.05em;
+        }
+
+        .lead {
+            margin: 0;
+            max-width: 36rem;
+            color: var(--muted);
+            font-size: clamp(17px, 4vw, 20px);
+            line-height: 1.7;
+        }
+
+        .notice {
+            margin-top: var(--space-xl);
+            display: grid;
+            gap: var(--space-md);
+            background: var(--amber-soft);
+            border: 1px solid color-mix(in oklch, var(--amber-ink) 18%, transparent);
+            border-radius: 18px;
+            padding: var(--space-lg);
+            color: var(--amber-ink);
+        }
+
+        .notice strong {
+            color: color-mix(in oklch, var(--amber-ink) 86%, black);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            margin-top: var(--space-xl);
+        }
+
+        .button {
+            min-height: 48px;
+            border-radius: 999px;
+            padding: 0 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: 1px solid transparent;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .button:active {
+            transform: translateY(1px) scale(0.99);
+        }
+
+        .button-primary {
+            color: oklch(99% 0.006 250);
+            background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+            box-shadow: 0 14px 26px color-mix(in oklch, var(--blue) 24%, transparent);
+        }
+
+        .button-secondary {
+            color: var(--blue-dark);
+            background: color-mix(in oklch, var(--blue-soft) 72%, white);
+            border-color: color-mix(in oklch, var(--blue) 16%, transparent);
+        }
+
+        .support {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--space-sm) var(--space-md);
+            margin-top: var(--space-lg);
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .group-id {
+            color: var(--ink);
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .copy-state {
+            min-height: 1.4em;
+            color: var(--blue-dark);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 520px) {
+            .panel {
+                border-radius: 24px;
+            }
+
+            .brand {
+                align-items: flex-start;
+            }
+
+            .actions,
+            .button {
+                width: 100%;
+            }
+
+            .button {
+                padding: 0 18px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .button {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell" aria-labelledby="title">
+        <section class="panel">
+            <div class="header">
+                <div class="brand" aria-label="LoveACE">
+                    <div class="logo-wrap">
+                        <img class="logo" src="../tools/publish/favicon.png" alt="LoveACE">
+                        <svg class="logo-fallback" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="eyebrow">LoveACE iOS</span>
+                        <span>下载说明</span>
+                    </div>
+                </div>
+
+                <h1 id="title">iOS 网页版已停用</h1>
+                <p class="lead">为了保证安装、更新和使用体验，iOS 用户请改用 TestFlight 版。</p>
+            </div>
+
+            <div class="notice" role="note">
+                <p><strong>下一步：</strong>打开 TestFlight 链接，按页面提示安装 LoveACE。</p>
+                <p>如果已经安装过旧的网页版入口，请直接切换到 TestFlight 版继续使用。</p>
+            </div>
+
+            <div class="actions">
+                <a class="button button-primary" href="https://testflight.apple.com/join/V2KrVbYZ" target="_blank" rel="noopener">打开 TestFlight</a>
+                <button class="button button-secondary" type="button" id="copyGroup">复制 QQ 群号</button>
+            </div>
+
+            <div class="support">
+                <span>遇到问题请加入 QQ 群</span>
+                <span class="group-id">942200655</span>
+                <span class="copy-state" id="copyState" aria-live="polite"></span>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const logo = document.querySelector('.logo');
+        const logoFallback = document.querySelector('.logo-fallback');
+        const remoteLogo = 'https://release-oss.loveace.tech/loveace/favicon.png';
+
+        logo.addEventListener('error', () => {
+            if (logo.dataset.remoteTried) {
+                logo.style.display = 'none';
+                logoFallback.style.display = 'block';
+                return;
+            }
+
+            logo.dataset.remoteTried = 'true';
+            logo.src = remoteLogo;
+        });
+
+        document.getElementById('copyGroup').addEventListener('click', async () => {
+            const state = document.getElementById('copyState');
+
+            try {
+                await navigator.clipboard.writeText('942200655');
+                state.textContent = '已复制';
+            } catch (_) {
+                state.textContent = '群号：942200655';
+            }
+        });
+    </script>
+</body>
+</html>

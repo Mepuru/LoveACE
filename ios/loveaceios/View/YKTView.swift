@@ -1,0 +1,131 @@
+import SwiftUI
+
+struct YKTView: View {
+    @Environment(AuthViewModel.self) private var authVM
+    @State private var vm = YKTViewModel()
+    @State private var showTransferSheet = false
+    @State private var showPasswordDialog = false
+    @State private var passwordInput = ""
+    @State private var passwordError = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    balanceHero
+                    transferButton
+                    if !vm.transactions.isEmpty { transactionSection }
+                    else if vm.isTransactionsLoading {
+                        ProgressView("加载消费记录...")
+                            .padding(20)
+                            .frame(maxWidth: .infinity)
+                            .glassCard(cornerRadius: 16)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("一卡通")
+            .navigationBarTitleDisplayMode(.inline)
+            .refreshable { vm.loadAll() }
+            .onAppear {
+                if let ykt = authVM.yktService { vm.initialize(service: ykt); vm.loadAll() }
+            }
+            .alert("身份验证", isPresented: $showPasswordDialog) {
+                SecureField("校园网关或教务处密码", text: $passwordInput)
+                Button("取消", role: .cancel) { passwordInput = ""; passwordError = false }
+                Button("确认") {
+                    if authVM.verifyPassword(passwordInput) {
+                        passwordError = false
+                        passwordInput = ""
+                        vm.unlockPayment()
+                        showTransferSheet = true
+                    } else {
+                        passwordError = true
+                        passwordInput = ""
+                        showPasswordDialog = true
+                    }
+                }
+            } message: {
+                Text(passwordError ? "密码错误，请重新输入" : "请输入校园网关密码或教务处密码以验证身份")
+            }
+            .sheet(isPresented: $showTransferSheet, onDismiss: {
+                vm.lockPayment()
+            }) {
+                TransferSheet(yktVM: vm, onDone: {
+                    showTransferSheet = false
+                    vm.loadAll()
+                })
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var balanceHero: some View {
+        VStack(spacing: 12) {
+            Text("校园卡余额").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+            if let balance = vm.balance {
+                Text("¥\(String(format: "%.2f", balance.balance))")
+                    .font(AppFont.heroNumber)
+                    .foregroundStyle(.white)
+            } else if vm.isLoading {
+                ProgressView().tint(.white).scaleEffect(1.2)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
+        .background(
+            LinearGradient(colors: [.blue, .teal, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+        .clipShape(.rect(cornerRadius: 24))
+        .shadow(color: .teal.opacity(0.3), radius: 16, y: 8)
+    }
+
+    @ViewBuilder
+    private var transferButton: some View {
+        Button {
+            showPasswordDialog = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bolt.fill")
+                    .font(.title3)
+                    .foregroundStyle(.yellow.gradient)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("划转电费")
+                        .font(.subheadline).fontWeight(.semibold)
+                    Text("从一卡通余额划转至宿舍电费账户")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .glassInteractiveCard(cornerRadius: 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var transactionSection: some View {
+        GlassSectionHeader(title: "近期消费", icon: "clock.arrow.circlepath")
+        VStack(spacing: 0) {
+            ForEach(Array(vm.transactions.enumerated()), id: \.element.id) { index, tx in
+                HStack {
+                    Text(tx.operationType).font(.subheadline).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(tx.area).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                    Text(tx.amountText)
+                        .font(.subheadline).monospacedDigit()
+                        .foregroundStyle(tx.isIncome ? .green : .primary)
+                        .frame(width: 72, alignment: .trailing)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                if index < vm.transactions.count - 1 {
+                    Divider().padding(.leading, 12)
+                }
+            }
+        }
+        .glassCard(cornerRadius: 12)
+    }
+}
