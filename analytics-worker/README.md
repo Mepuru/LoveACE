@@ -1,23 +1,29 @@
-# LoveACE Analytics Worker
+# LoveACE 遥测 Worker
 
-Privacy-friendly analytics endpoint for LoveACE clients, deployed on Cloudflare Workers with D1.
+这是 LoveACE 客户端使用的隐私友好遥测入口，部署在 Cloudflare Workers，并使用 D1 存储事件数据。
 
-## Endpoints
+## 接口
 
 - `GET /healthz`
 - `POST /v1/events`
 
-Requests to `/v1/events` must include:
+请求 `/v1/events` 时必须带上以下鉴权头：
 
 - `Authorization: Bearer <ANALYTICS_API_KEY>`
 - `X-LoveACE-Timestamp`
 - `X-LoveACE-Nonce`
 - `X-LoveACE-Signature`
 
-Signature payload:
+签名内容：
 
 ```text
 HMAC_SHA256(ANALYTICS_SIGNING_SECRET, timestamp + "." + nonce + "." + sha256(raw_body))
 ```
 
-The service stores `grade_prefix` and salted `student_hash`, never the full plaintext student id.
+服务端只保存 `grade_prefix` 和加盐后的 `student_hash`，不会保存完整明文学号。
+
+## 数据边界
+
+- 不接收密码、完整学号或业务接口原始返回。
+- 不接收成绩、课表、一卡通消费、门禁、评教等具体业务内容。
+- 遥测不可用时客户端会静默忽略，不影响正常使用。

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="160" alt="LoveACE Logo" />
+  <img src="assets/logo.png" width="160" alt="LoveACE 标志" />
 </p>
 
 <h1 align="center">LoveACE</h1>
@@ -9,10 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Sibuxiangx/LoveACE/actions/workflows/build-apk.yml"><img alt="Android Build" src="https://img.shields.io/github/actions/workflow/status/Sibuxiangx/LoveACE/build-apk.yml?branch=main&label=Android%20Release&style=flat-square"></a>
-  <img alt="Android" src="https://img.shields.io/badge/Android-1.1.11-3DDC84?style=flat-square&logo=android&logoColor=white">
+  <a href="https://github.com/Sibuxiangx/LoveACE/actions/workflows/build-apk.yml"><img alt="安卓发布构建" src="https://img.shields.io/github/actions/workflow/status/Sibuxiangx/LoveACE/build-apk.yml?branch=main&label=%E5%AE%89%E5%8D%93%E5%8F%91%E5%B8%83&style=flat-square"></a>
+  <img alt="安卓版本" src="https://img.shields.io/badge/Android-1.1.13-3DDC84?style=flat-square&logo=android&logoColor=white">
   <img alt="iOS" src="https://img.shields.io/badge/iOS-17%2B-000000?style=flat-square&logo=apple&logoColor=white">
-  <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square">
+  <img alt="许可证" src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-Apache--2.0-blue?style=flat-square">
 </p>
 
 ---
@@ -56,12 +56,12 @@ LoveACE/
 
 ## Android 构建与发布
 
-Android 发布通过 GitHub Actions 手动触发，不会在 push 时自动运行。
+Android 发布通过 GitHub Actions 手动触发，不会在推送代码时自动运行。
 
 ```bash
 gh workflow run build-apk.yml \
   --ref main \
-  -f version=1.1.11 \
+  -f version=1.1.13 \
   -f changelog="更新内容" \
   -f content="发现新版本" \
   -f force=false
@@ -69,10 +69,10 @@ gh workflow run build-apk.yml \
 
 工作流会依次完成：
 
-1. 还原 release 签名密钥
-2. 构建 debug / release APK
-3. 上传 APK artifacts
-4. 通过 `android/tools/publish` 发布 release APK 并更新 OTA manifest
+1. 还原正式版签名密钥
+2. 构建调试版和正式版 APK
+3. 上传 APK 构建产物
+4. 通过 `android/tools/publish` 发布正式版 APK 并更新 OTA 清单
 
 > 签名密钥和 S3/CDN 配置均通过 GitHub Secrets 注入，禁止提交到仓库。
 
@@ -95,7 +95,7 @@ xcodebuild -project loveaceios.xcodeproj \
   build
 ```
 
-如需 TestFlight / App Store Connect 上传，请使用 Xcode 或项目内的 `ExportOptions.plist` 配合签名配置完成。
+如需上传到 TestFlight 或 App Store Connect，请使用 Xcode，或配合项目内的 `ExportOptions.plist` 与签名配置完成。
 
 ## 本地开发
 
@@ -109,9 +109,9 @@ cd LoveACE
 
 ## 安全约定
 
-- 不提交 `.env`、`local.properties`、keystore、证书、provisioning profile 等敏感文件。
-- Android release 签名只在 GitHub Actions 中通过 Secrets 还原。
-- 发布工具所需 S3/CDN 凭据只通过环境变量或本地 ignored `.env` 提供。
+- 不提交 `.env`、`local.properties`、签名密钥库、证书、描述文件等敏感文件。
+- Android 正式版签名只在 GitHub Actions 中通过 Secrets 还原。
+- 发布工具所需 S3/CDN 凭据只通过环境变量或本地已忽略的 `.env` 提供。
 
 ## 许可证
 
