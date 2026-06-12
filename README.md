@@ -28,6 +28,14 @@ LoveACE 是一个围绕校园学习与生活场景构建的移动端项目，提
 
 历史版本和旧后端以分支形式保留，便于查阅与迁移。
 
+## 匿名使用统计
+
+<p align="center">
+  <img src="assets/analytics-stats.svg" alt="LoveACE 匿名使用统计" />
+</p>
+
+统计卡片由 GitHub Actions 定时从 Cloudflare D1 读取聚合结果生成，只展示匿名汇总数据，不展示明文学号或任何业务内容。
+
 ## 仓库结构
 
 ```text

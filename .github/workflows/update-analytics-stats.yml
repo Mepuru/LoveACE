@@ -1,0 +1,47 @@
+name: 更新遥测统计卡片
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: analytics-worker/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+        working-directory: analytics-worker
+
+      - name: 生成统计卡片
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run stats:card
+        working-directory: analytics-worker
+
+      - name: 提交统计卡片
+        run: |
+          if git diff --quiet -- assets/analytics-stats.svg; then
+            echo "统计卡片没有变化"
+            exit 0
+          fi
+          git add assets/analytics-stats.svg
+          git \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "docs: update analytics stats card"
+          git push

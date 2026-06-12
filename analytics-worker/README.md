@@ -27,3 +27,7 @@ HMAC_SHA256(ANALYTICS_SIGNING_SECRET, timestamp + "." + nonce + "." + sha256(raw
 - 不接收密码、完整学号或业务接口原始返回。
 - 不接收成绩、课表、一卡通消费、门禁、评教等具体业务内容。
 - 遥测不可用时客户端会静默忽略，不影响正常使用。
+
+## 统计卡片
+
+仓库根目录的 `assets/analytics-stats.svg` 由 `.github/workflows/update-analytics-stats.yml` 生成。该工作流会定时或手动读取 D1 的聚合统计，只提交 SVG 汇总卡片，不输出原始事件数据。
