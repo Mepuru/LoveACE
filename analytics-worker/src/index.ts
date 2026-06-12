@@ -44,6 +44,7 @@ interface CountRow {
 }
 
 interface VersionRow {
+  platform: string | null;
   app_version: string | null;
   clients: number;
   events: number;
@@ -225,10 +226,10 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
     jsonPropertyRows(db, "screen", 8),
     jsonPropertyRows(db, "feature", 8),
     db.prepare(`
-      SELECT app_version, COUNT(DISTINCT client_id) AS clients, COUNT(*) AS events
+      SELECT platform, app_version, COUNT(DISTINCT client_id) AS clients, COUNT(*) AS events
       FROM analytics_events
-      GROUP BY app_version
-      ORDER BY events DESC, app_version DESC
+      GROUP BY platform, app_version
+      ORDER BY events DESC, platform ASC, app_version DESC
       LIMIT 6
     `).all<VersionRow>(),
     db.prepare(`

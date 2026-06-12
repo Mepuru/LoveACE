@@ -62,8 +62,9 @@
     .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ink), #4a4540); transition: width .35s ease; }
     .bar-fill.hot { background: var(--orange); }
     .bar-count { text-align: right; color: var(--muted); font: 12px/1 var(--mono); }
-    .version-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee8e1; align-items: center; }
+    .version-row { display: grid; grid-template-columns: 74px 1fr auto auto; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee8e1; align-items: center; }
     .version-row:last-child { border-bottom: 0; }
+    .platform-chip { width: fit-content; border: 1px solid #ded7cf; border-radius: 999px; padding: 4px 8px; color: var(--muted); font: 10px/1 var(--mono); text-transform: uppercase; }
     .code { font-family: var(--mono); }
     .privacy { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ddd6ce; color: var(--muted); font: 11px/1.45 var(--mono); }
     @media (max-width: 900px) { .metrics, .main, .lower { grid-template-columns: 1fr; } .topbar, .notice { align-items: flex-start; flex-direction: column; } }
@@ -96,7 +97,7 @@
         <article class="card panel"><div class="panel-head"><h2>年级前缀</h2><span class="stamp">DISTINCT_USERS</span></div><div id="grades"></div><div class="privacy">DATA_RULE: COUNT(DISTINCT student_hash) GROUP BY grade_prefix</div></article>
       </section>
       <section class="grid lower">
-        <article class="card panel"><div class="panel-head"><h2>App 版本</h2><span class="stamp">APP_VERSION</span></div><div id="versions"></div></article>
+        <article class="card panel"><div class="panel-head"><h2>App 版本</h2><span class="stamp">PLATFORM / VERSION</span></div><div id="versions"></div></article>
         <article class="card panel"><div class="panel-head"><h2>登录健康度</h2><span class="stamp">AUTH_EVENTS</span></div><div id="auth"></div></article>
         <article class="card panel"><div class="panel-head"><h2>OTA 触达</h2><span class="stamp">UPDATE_EVENTS</span></div><div id="ota"></div></article>
       </section>
@@ -165,7 +166,7 @@
 
     function versions(rows) {
       if (!rows.length) return `<div class="hint">--- NO_VERSION_DATA ---</div>`;
-      return rows.map((row) => `<div class="version-row"><strong class="code">v${escapeHtml(row.app_version || "unknown")}</strong><span class="bar-count">CLIENTS ${formatNumber(row.clients)}</span><span class="bar-count">EVENTS ${formatNumber(row.events)}</span></div>`).join("");
+      return rows.map((row) => `<div class="version-row"><span class="platform-chip">${escapeHtml(row.platform || "unknown")}</span><strong class="code">v${escapeHtml(row.app_version || "unknown")}</strong><span class="bar-count">CLIENTS ${formatNumber(row.clients)}</span><span class="bar-count">EVENTS ${formatNumber(row.events)}</span></div>`).join("");
     }
 
     function mergeUsage(features, screens) {
