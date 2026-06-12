@@ -95,7 +95,10 @@ jobs:
           MARKETING_VERSION: ${{ steps.version.outputs.marketing_version }}
           BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
         run: |
-          python3 -m pip install --user pyjwt cryptography requests
+          python3 -m venv /tmp/asc-api-venv
+          source /tmp/asc-api-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install pyjwt cryptography requests
           python3 - <<'PY'
           import os
           import sys
