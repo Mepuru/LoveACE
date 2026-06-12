@@ -220,7 +220,7 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
       FROM analytics_events
     `).first<SummaryRow>(),
     countRows(db, "event_name", 8),
-    countRows(db, "platform", 4),
+    platformRows(db, 4),
     gradeRows(db, 8),
     jsonPropertyRows(db, "screen", 8),
     jsonPropertyRows(db, "feature", 8),
@@ -276,6 +276,17 @@ function gradeRows(db: D1Database, limit: number): Promise<D1Result<CountRow>> {
     WHERE grade_prefix IS NOT NULL AND student_hash IS NOT NULL
     GROUP BY grade_prefix
     ORDER BY count DESC, grade_prefix ASC
+    LIMIT ?
+  `).bind(limit).all<CountRow>();
+}
+
+function platformRows(db: D1Database, limit: number): Promise<D1Result<CountRow>> {
+  return db.prepare(`
+    SELECT platform AS label, COUNT(DISTINCT student_hash) AS count
+    FROM analytics_events
+    WHERE platform IS NOT NULL AND student_hash IS NOT NULL
+    GROUP BY platform
+    ORDER BY count DESC, platform ASC
     LIMIT ?
   `).bind(limit).all<CountRow>();
 }
