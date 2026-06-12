@@ -1,0 +1,90 @@
+name: Deploy Analytics Server
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Check Python server
+        working-directory: analytics-server
+        run: |
+          uv sync
+          uv run ruff check app
+          uv run basedpyright
+
+      - name: Build Docker images
+        run: |
+          docker build -t loveace-analytics-api:latest analytics-server
+          docker pull postgres:16-alpine
+          docker save loveace-analytics-api:latest postgres:16-alpine | gzip > analytics-images.tar.gz
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.ANALYTICS_DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ vars.ANALYTICS_SERVER_HOST }}
+          SSH_PORT: ${{ vars.ANALYTICS_SERVER_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/loveace_analytics_deploy
+          chmod 600 ~/.ssh/loveace_analytics_deploy
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Prepare deployment files
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.ANALYTICS_POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.ANALYTICS_DATABASE_URL }}
+          ANALYTICS_API_KEY: ${{ secrets.ANALYTICS_API_KEY }}
+          ANALYTICS_SIGNING_SECRET: ${{ secrets.ANALYTICS_SIGNING_SECRET }}
+          ANALYTICS_HASH_SALT: ${{ secrets.ANALYTICS_HASH_SALT }}
+          IP_HASH_SALT: ${{ secrets.ANALYTICS_IP_HASH_SALT }}
+        run: |
+          mkdir -p .deploy/analytics-server
+          rsync -a --exclude '.env' --exclude '.venv' --exclude '__pycache__' --exclude '.ruff_cache' analytics-server/ .deploy/analytics-server/
+          cat > .deploy/analytics-server/.env <<EOF
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          DATABASE_URL=$DATABASE_URL
+          ANALYTICS_API_KEY=$ANALYTICS_API_KEY
+          ANALYTICS_SIGNING_SECRET=$ANALYTICS_SIGNING_SECRET
+          ANALYTICS_HASH_SALT=$ANALYTICS_HASH_SALT
+          IP_HASH_SALT=$IP_HASH_SALT
+          LOG_LEVEL=INFO
+          EOF
+
+      - name: Upload deployment files
+        env:
+          SSH_HOST: ${{ vars.ANALYTICS_SERVER_HOST }}
+          SSH_USER: ${{ vars.ANALYTICS_SERVER_USER }}
+          SSH_PORT: ${{ vars.ANALYTICS_SERVER_PORT }}
+          SERVER_PATH: ${{ vars.ANALYTICS_SERVER_PATH }}
+        run: |
+          ssh -i ~/.ssh/loveace_analytics_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p '$SERVER_PATH'"
+          rsync -az --delete -e "ssh -i ~/.ssh/loveace_analytics_deploy -p $SSH_PORT" .deploy/analytics-server/ "$SSH_USER@$SSH_HOST:$SERVER_PATH/"
+          scp -i ~/.ssh/loveace_analytics_deploy -P "$SSH_PORT" analytics-images.tar.gz "$SSH_USER@$SSH_HOST:$SERVER_PATH/analytics-images.tar.gz"
+
+      - name: Load images and restart services
+        env:
+          SSH_HOST: ${{ vars.ANALYTICS_SERVER_HOST }}
+          SSH_USER: ${{ vars.ANALYTICS_SERVER_USER }}
+          SSH_PORT: ${{ vars.ANALYTICS_SERVER_PORT }}
+          SERVER_PATH: ${{ vars.ANALYTICS_SERVER_PATH }}
+        run: |
+          ssh -i ~/.ssh/loveace_analytics_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "cd '$SERVER_PATH' && gzip -dc analytics-images.tar.gz | docker load && docker compose up -d --no-build && rm -f analytics-images.tar.gz"
+
+      - name: Health check
+        env:
+          SSH_HOST: ${{ vars.ANALYTICS_SERVER_HOST }}
+          SSH_USER: ${{ vars.ANALYTICS_SERVER_USER }}
+          SSH_PORT: ${{ vars.ANALYTICS_SERVER_PORT }}
+          SERVER_PORT: ${{ vars.ANALYTICS_SERVER_LOCAL_PORT }}
+        run: |
+          ssh -i ~/.ssh/loveace_analytics_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "curl --fail --silent --show-error 'http://127.0.0.1:$SERVER_PORT/healthz'"
