@@ -30,3 +30,9 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# Cloudflare
+.wrangler/
+
+# Node.js
+node_modules/

@@ -1,0 +1,20 @@
+name = "loveace-analytics"
+main = "src/index.ts"
+compatibility_date = "2026-06-12"
+workers_dev = false
+
+routes = [
+  { pattern = "analyst-api.loveace.top", custom_domain = true }
+]
+
+[vars]
+MAX_BODY_BYTES = "32768"
+MAX_EVENTS_PER_REQUEST = "50"
+NONCE_TTL_SECONDS = "600"
+RATE_LIMIT_PER_MINUTE = "60"
+TIMESTAMP_SKEW_SECONDS = "300"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "loveace-analytics"
+database_id = "6a58a4ca-21af-4cc4-8c2a-6101865c7985"
