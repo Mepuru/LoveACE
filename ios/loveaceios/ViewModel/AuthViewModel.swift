@@ -44,6 +44,7 @@ final class AuthViewModel {
                 else if ecResult.failMaybeAttacked { msg = "登录过于频繁，请稍后再试" }
                 else if ecResult.failNetworkError { msg = "网络连接失败" }
                 else { msg = "校园网关登录失败" }
+                Analytics.shared.trackLoginFailed(userId: userId, reason: msg)
                 state = .error; errorMessage = msg; return
             }
 
@@ -53,6 +54,7 @@ final class AuthViewModel {
                 if uaapResult.failInvalidCredentials { msg = "教务系统密码错误" }
                 else if uaapResult.failNetworkError { msg = "网络连接失败" }
                 else { msg = "UAAP 登录失败" }
+                Analytics.shared.trackLoginFailed(userId: userId, reason: msg)
                 state = .error; errorMessage = msg; return
             }
 
@@ -62,6 +64,7 @@ final class AuthViewModel {
             credentialStore.save(UserCredentials(userId: userId, ecPassword: ecPassword, password: password))
             credentialStore.saveRemembered(UserCredentials(userId: userId, ecPassword: ecPassword, password: password))
             self.userId = userId
+            Analytics.shared.trackLoginSuccess(userId: userId)
             state = .authenticated
             logger.info("Login successful: \(userId)")
         }
@@ -76,14 +79,21 @@ final class AuthViewModel {
             let conn = AUFEConnection(userId: creds.userId, ecPassword: creds.ecPassword, password: creds.password)
             await conn.startClient()
             let ec = await conn.ecLogin()
-            guard ec.success else { state = .unauthenticated; return }
+            guard ec.success else {
+                Analytics.shared.trackLoginFailed(userId: creds.userId, reason: "restore_ec_failed")
+                state = .unauthenticated; return
+            }
             let uaap = await conn.uaapLogin()
-            guard uaap.success else { state = .unauthenticated; return }
+            guard uaap.success else {
+                Analytics.shared.trackLoginFailed(userId: creds.userId, reason: "restore_uaap_failed")
+                state = .unauthenticated; return
+            }
             connection = conn
             initServices(conn)
             startHeartbeat()
             credentialStore.save(creds)
             userId = creds.userId
+            Analytics.shared.trackLoginSuccess(userId: creds.userId)
             state = .authenticated
             logger.info("Session restored: \(creds.userId)")
         }
@@ -93,6 +103,7 @@ final class AuthViewModel {
         stopHeartbeat()
         clearServices()
         credentialStore.clear()
+        Analytics.shared.clearUser()
         state = .unauthenticated
         logger.info("Logged out")
     }
@@ -125,12 +136,15 @@ final class AuthViewModel {
         defer { isReconnecting = false }
         guard let conn = connection else { return }
         logger.info("Auto-reconnecting...")
+        Analytics.shared.trackSessionExpired(reason: "session_expired")
         let success = await conn.reconnect()
         if success {
             initServices(conn)
+            Analytics.shared.trackSessionReconnectSuccess()
             logger.info("Auto-reconnect succeeded")
         } else {
             stopHeartbeat()
+            Analytics.shared.trackSessionReconnectFailed()
             state = .error; errorMessage = "会话已过期，请重新登录"
         }
     }

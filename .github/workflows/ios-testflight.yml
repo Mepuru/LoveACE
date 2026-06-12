@@ -1,0 +1,208 @@
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and sign only; do not upload to TestFlight"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Archive iOS App
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Create App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_P8" > "$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          chmod 600 "$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+
+      - name: Create analytics secrets
+        env:
+          ANALYTICS_API_KEY: ${{ secrets.ANALYTICS_API_KEY }}
+          ANALYTICS_SIGNING_SECRET: ${{ secrets.ANALYTICS_SIGNING_SECRET }}
+          ANALYTICS_HASH_SALT: ${{ secrets.ANALYTICS_HASH_SALT }}
+        run: |
+          cat > ios/loveaceios/AnalyticsSecrets.swift <<EOF
+          import Foundation
+
+          enum AnalyticsSecrets {
+              static let endpoint = "https://analyst-api.linota.cn/v1/events"
+              static let apiKey = "$ANALYTICS_API_KEY"
+              static let signingSecret = "$ANALYTICS_SIGNING_SECRET"
+              static let hashSalt = "$ANALYTICS_HASH_SALT"
+          }
+          EOF
+
+      - name: Resolve Swift packages
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project "loveaceios.xcodeproj" \
+            -scheme "loveaceios" \
+            -resolvePackageDependencies \
+            -onlyUsePackageVersionsFromResolvedFile
+
+      - name: Read project version
+        id: version
+        working-directory: ios
+        run: |
+          SETTINGS=$(xcodebuild \
+            -project "loveaceios.xcodeproj" \
+            -scheme "loveaceios" \
+            -configuration Release \
+            -showBuildSettings)
+          MARKETING_VERSION=$(printf '%s\n' "$SETTINGS" | awk -F'= ' '/MARKETING_VERSION = / {print $2; exit}')
+          BUILD_NUMBER=$(printf '%s\n' "$SETTINGS" | awk -F'= ' '/CURRENT_PROJECT_VERSION = / {print $2; exit}')
+          if [ -z "$MARKETING_VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "Failed to read MARKETING_VERSION or CURRENT_PROJECT_VERSION" >&2
+            exit 1
+          fi
+          echo "marketing_version=$MARKETING_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Current iOS version: $MARKETING_VERSION ($BUILD_NUMBER)"
+
+      - name: Check TestFlight build number
+        if: ${{ inputs.dry_run == 'false' }}
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          IOS_APP_BUNDLE_ID: ${{ vars.IOS_APP_BUNDLE_ID }}
+          MARKETING_VERSION: ${{ steps.version.outputs.marketing_version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          python3 -m pip install --user pyjwt cryptography requests
+          python3 - <<'PY'
+          import os
+          import sys
+          import time
+          import jwt
+          import requests
+
+          key_id = os.environ["APP_STORE_CONNECT_API_KEY_ID"]
+          issuer_id = os.environ["APP_STORE_CONNECT_API_ISSUER_ID"]
+          private_key = os.environ["APP_STORE_CONNECT_API_KEY_P8"]
+          bundle_id = os.environ["IOS_APP_BUNDLE_ID"]
+          marketing_version = os.environ["MARKETING_VERSION"]
+          build_number = int(os.environ["BUILD_NUMBER"])
+
+          token = jwt.encode(
+              {"iss": issuer_id, "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+              private_key,
+              algorithm="ES256",
+              headers={"kid": key_id, "typ": "JWT"},
+          )
+          headers = {"Authorization": f"Bearer {token}"}
+          base = "https://api.appstoreconnect.apple.com/v1"
+
+          apps = requests.get(f"{base}/apps", headers=headers, params={"filter[bundleId]": bundle_id}, timeout=30)
+          apps.raise_for_status()
+          data = apps.json().get("data", [])
+          if not data:
+              print(f"No App Store Connect app found for bundle id {bundle_id}", file=sys.stderr)
+              sys.exit(1)
+
+          app_id = data[0]["id"]
+          max_remote_build = 0
+          url = f"{base}/builds"
+          params = {"filter[app]": app_id, "filter[version]": marketing_version, "limit": 200}
+          while url:
+              response = requests.get(url, headers=headers, params=params, timeout=30)
+              response.raise_for_status()
+              payload = response.json()
+              for item in payload.get("data", []):
+                  value = item.get("attributes", {}).get("version")
+                  try:
+                      max_remote_build = max(max_remote_build, int(value))
+                  except (TypeError, ValueError):
+                      pass
+              url = payload.get("links", {}).get("next")
+              params = None
+
+          print(f"TestFlight max build for {marketing_version}: {max_remote_build}")
+          print(f"Local build: {build_number}")
+          if build_number <= max_remote_build:
+              print(
+                  f"CURRENT_PROJECT_VERSION must be manually increased: {build_number} <= {max_remote_build}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          PY
+
+      - name: Prepare export options
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          cp ios/ExportOptions.plist /tmp/ExportOptions.plist
+          if [ "$DRY_RUN" = "true" ]; then
+            /usr/libexec/PlistBuddy -c "Set :destination export" /tmp/ExportOptions.plist
+          fi
+
+      - name: Archive app
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        working-directory: ios
+        run: |
+          mkdir -p build/TestFlight
+          xcodebuild \
+            -project "loveaceios.xcodeproj" \
+            -scheme "loveaceios" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "build/TestFlight/loveaceios.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            archive
+
+      - name: Export or upload archive
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath "build/TestFlight/loveaceios.xcarchive" \
+            -exportOptionsPlist "/tmp/ExportOptions.plist" \
+            -exportPath "build/TestFlight/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8" \
+            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_API_ISSUER_ID"
+
+      - name: Upload signed artifacts
+        if: ${{ always() && inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: loveace-ios-signed-dry-run
+          path: |
+            ios/build/TestFlight/export
+            ios/build/TestFlight/loveaceios.xcarchive
+          if-no-files-found: ignore

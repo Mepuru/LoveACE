@@ -19,5 +19,19 @@ struct MainTabView: View {
                 .tabItem { Label("我的", systemImage: "person.fill") }
                 .tag(3)
         }
+        .onAppear { Analytics.shared.trackScreen(tabName(selectedTab)) }
+        .onChange(of: selectedTab) { _, newValue in
+            Analytics.shared.trackScreen(tabName(newValue))
+        }
+    }
+
+    private func tabName(_ index: Int) -> String {
+        switch index {
+        case 0: "首页"
+        case 1: "爱安财"
+        case 2: "更多"
+        case 3: "我的"
+        default: "unknown"
+        }
     }
 }

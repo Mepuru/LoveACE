@@ -29,6 +29,9 @@ struct MoreView: View {
                                 FeatureCard(title: feature.title, icon: feature.icon, tint: feature.tint)
                             }
                             .buttonStyle(.plain)
+                            .simultaneousGesture(TapGesture().onEnded {
+                                Analytics.shared.trackFeature(feature.title)
+                            })
                         }
                     }
                 }

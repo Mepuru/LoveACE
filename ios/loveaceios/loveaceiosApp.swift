@@ -8,6 +8,7 @@ struct loveaceiosApp: App {
         WindowGroup {
             ContentView()
                 .environment(authVM)
+                .onAppear { Analytics.shared.trackAppStart(launchSource: "cold_start") }
         }
     }
 }

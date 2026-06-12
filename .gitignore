@@ -2,6 +2,7 @@
 
 # Local config and secrets
 .env
+ios/loveaceios/AnalyticsSecrets.swift
 *.jks
 *.keystore
 *.p12
