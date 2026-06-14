@@ -44,7 +44,7 @@
     .range-tab.active { border-color: rgba(244,81,30,.7); background: rgba(244,81,30,.08); color: var(--ink); }
     .grid { display: grid; gap: 14px; }
     .metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-    .main { grid-template-columns: minmax(0, 2fr) minmax(380px, .95fr); align-items: start; margin-top: 14px; }
+    .main { grid-template-columns: minmax(0, 2fr) minmax(380px, .95fr); margin-top: 14px; }
     .lower { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
     .card { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 0 rgba(28,28,30,.04), 0 10px 28px rgba(28,28,30,.045); transition: border-color .2s ease; }
     .card:hover { border-color: rgba(244,81,30,.42); }
@@ -57,7 +57,8 @@
     .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
     h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
     .stamp { color: var(--muted); font: 11px/1 var(--mono); }
-    .trend { position: relative; height: 340px; border-radius: 6px; background: repeating-linear-gradient(to bottom, transparent 0 67px, rgba(28,28,30,.06) 68px), linear-gradient(180deg, #fffefa, #fbfaf7); border: 1px solid #eee8e1; }
+    .trend-panel { display: grid; grid-template-rows: auto 1fr; }
+    .trend { position: relative; align-self: center; height: 340px; border-radius: 6px; background: repeating-linear-gradient(to bottom, transparent 0 67px, rgba(28,28,30,.06) 68px), linear-gradient(180deg, #fffefa, #fbfaf7); border: 1px solid #eee8e1; }
     .trend svg { width: 100%; height: 100%; display: block; overflow: visible; }
     .trend-tooltip { position: absolute; z-index: 3; min-width: 138px; transform: translate(-50%, calc(-100% - 14px)); border: 1px solid #dcd4ca; border-radius: 8px; background: rgba(255,254,250,.96); box-shadow: 0 12px 28px rgba(28,28,30,.12); padding: 9px 10px; color: var(--ink); font: 12px/1.35 var(--mono); pointer-events: none; opacity: 0; transition: opacity .12s ease; }
     .trend-tooltip.visible { opacity: 1; }
@@ -106,7 +107,7 @@
 
       <section class="grid metrics" id="metrics"></section>
       <section class="grid main">
-        <article class="card panel"><div class="panel-head"><h2>区间事件趋势</h2><span class="stamp" id="trend-stamp">BUCKET: HOUR</span></div><div class="trend" id="trend"></div></article>
+        <article class="card panel trend-panel"><div class="panel-head"><h2>区间事件趋势</h2><span class="stamp" id="trend-stamp">BUCKET: HOUR</span></div><div class="trend" id="trend"></div></article>
         <article class="card panel"><div class="panel-head"><h2>归一化功能排行</h2><span class="stamp">NORMALIZED_USAGE</span></div><div id="usage"></div><div class="privacy">DATA_RULE: screen/feature aliases normalized; users=COUNT(DISTINCT student_hash); A/I=Android/iOS events</div></article>
       </section>
       <section class="grid lower">
