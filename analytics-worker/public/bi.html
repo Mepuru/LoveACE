@@ -146,10 +146,10 @@
       const summary = data.summary || {};
       const period = data.period || { label: "今日", bucketLabel: "HOUR" };
       byId("generated-at").textContent = `Live · ${period.label} · ${formatDate(data.generatedAt)}`;
-      byId("last-event").textContent = `LAST_EVENT=${summary.last_event_at ? `${summary.last_event_at} UTC` : "---"}`;
-      byId("trend-stamp").textContent = `BUCKET: ${period.bucketLabel || "HOUR"}`;
+      byId("last-event").textContent = `LAST_EVENT=${summary.last_event_at ? `${summary.last_event_at} UTC+8` : "---"}`;
+      byId("trend-stamp").textContent = `BUCKET: ${period.bucketLabel || "HOUR"} · UTC+8`;
       byId("metrics").innerHTML = [
-        metric("区间事件", summary.total_events, `${period.label} · COUNT(*)`),
+        metric("区间事件", summary.total_events, `${period.label} · UTC+8 · COUNT(*)`),
         metric("区间用户", summary.users, "COUNT(DISTINCT student_hash)"),
         metric("DAU", summary.dau, "today active users"),
         metric("WAU", summary.wau, "last 7 days active users"),
@@ -267,7 +267,10 @@
 
     function formatNumber(value) { return numberFormat.format(Number(value) || 0); }
     function formatCompact(value) { return new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value) || 0); }
-    function formatDate(value) { return value ? value.replace("T", " ").replace(/\.\d{3}Z$/, " UTC") : "SYNC_PENDING"; }
+    function formatDate(value) {
+      if (!value) return "SYNC_PENDING";
+      return new Date(value).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replaceAll("/", "-") + " UTC+8";
+    }
     function escapeHtml(value) {
       return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
     }

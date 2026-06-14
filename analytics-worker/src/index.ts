@@ -243,10 +243,10 @@ async function loadDashboardData(db: D1Database, range: PeriodRange): Promise<An
         COUNT(DISTINCT student_hash) AS users,
         SUM(CASE WHEN created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) AS events_24h,
         SUM(CASE WHEN created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) AS events_7d,
-        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', 'start of day')) AS dau,
-        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', '-6 days', 'start of day')) AS wau,
-        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', 'start of month')) AS mau,
-        MAX(created_at) AS last_event_at
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= ${shanghaiDayStartUtc()}) AS dau,
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= ${shanghaiWeekStartUtc()}) AS wau,
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= ${shanghaiMonthStartUtc()}) AS mau,
+        MAX(datetime(created_at, '+8 hours')) AS last_event_at
       FROM analytics_events
       WHERE ${where}
     `).first<SummaryRow>(),
@@ -411,14 +411,26 @@ function periodInfo(range: PeriodRange): PeriodInfo {
 }
 
 function periodWhere(range: PeriodRange): string {
-  if (range === "week") return "created_at >= datetime('now', '-6 days', 'start of day')";
-  if (range === "month") return "created_at >= datetime('now', 'start of month')";
-  return "created_at >= datetime('now', 'start of day')";
+  if (range === "week") return `created_at >= ${shanghaiWeekStartUtc()}`;
+  if (range === "month") return `created_at >= ${shanghaiMonthStartUtc()}`;
+  return `created_at >= ${shanghaiDayStartUtc()}`;
 }
 
 function trendBucketExpression(range: PeriodRange): string {
-  if (range === "day") return "strftime('%H:00', created_at)";
-  return "strftime('%Y-%m-%d', created_at)";
+  if (range === "day") return "strftime('%H:00', datetime(created_at, '+8 hours'))";
+  return "strftime('%Y-%m-%d', datetime(created_at, '+8 hours'))";
+}
+
+function shanghaiDayStartUtc(): string {
+  return "datetime('now', '+8 hours', 'start of day', '-8 hours')";
+}
+
+function shanghaiWeekStartUtc(): string {
+  return "datetime('now', '+8 hours', '-6 days', 'start of day', '-8 hours')";
+}
+
+function shanghaiMonthStartUtc(): string {
+  return "datetime('now', '+8 hours', 'start of month', '-8 hours')";
 }
 
 function emptySummary(): SummaryRow {
