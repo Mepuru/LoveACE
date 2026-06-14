@@ -35,6 +35,9 @@ interface SummaryRow {
   users: number;
   events_24h: number;
   events_7d: number;
+  dau: number;
+  wau: number;
+  mau: number;
   last_event_at: string | null;
 }
 
@@ -53,15 +56,32 @@ interface VersionRow {
 interface TrendRow {
   bucket: string;
   count: number;
+  users: number;
+}
+
+interface PeriodInfo {
+  range: PeriodRange;
+  label: string;
+  bucketLabel: string;
+}
+
+interface UsageRow {
+  label: string | null;
+  count: number;
+  users: number;
+  android: number;
+  ios: number;
 }
 
 interface AnalyticsDashboardData {
+  period: PeriodInfo;
   summary: SummaryRow;
   eventDistribution: CountRow[];
   platformDistribution: CountRow[];
   gradeDistribution: CountRow[];
   screenDistribution: CountRow[];
   featureDistribution: CountRow[];
+  normalizedUsage: UsageRow[];
   versions: VersionRow[];
   authStats: CountRow[];
   otaStats: CountRow[];
@@ -95,6 +115,8 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   "target_version",
 ]);
 
+type PeriodRange = "day" | "week" | "month";
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -104,7 +126,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/bi/data") {
-      const data = await loadDashboardData(env.DB);
+      const data = await loadDashboardData(env.DB, parsePeriodRange(url.searchParams.get("range")));
       return json(data, 200, { "Cache-Control": "no-store" });
     }
 
@@ -197,7 +219,10 @@ async function serveDashboard(request: Request, env: Env): Promise<Response> {
   });
 }
 
-async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData> {
+async function loadDashboardData(db: D1Database, range: PeriodRange): Promise<AnalyticsDashboardData> {
+  const period = periodInfo(range);
+  const where = periodWhere(range);
+  const trendBucket = trendBucketExpression(range);
   const [
     summary,
     eventDistribution,
@@ -205,6 +230,7 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
     gradeDistribution,
     screenDistribution,
     featureDistribution,
+    normalizedUsage,
     versions,
     authStats,
     otaStats,
@@ -217,17 +243,23 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
         COUNT(DISTINCT student_hash) AS users,
         SUM(CASE WHEN created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) AS events_24h,
         SUM(CASE WHEN created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) AS events_7d,
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', 'start of day')) AS dau,
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', '-6 days', 'start of day')) AS wau,
+        (SELECT COUNT(DISTINCT student_hash) FROM analytics_events WHERE created_at >= datetime('now', 'start of month')) AS mau,
         MAX(created_at) AS last_event_at
       FROM analytics_events
+      WHERE ${where}
     `).first<SummaryRow>(),
-    countRows(db, "event_name", 8),
-    platformRows(db, 4),
-    gradeRows(db, 8),
-    jsonPropertyRows(db, "screen", 8),
-    jsonPropertyRows(db, "feature", 8),
+    countRows(db, "event_name", 8, where),
+    platformRows(db, 4, where),
+    gradeRows(db, 8, where),
+    jsonPropertyRows(db, "screen", 8, where),
+    jsonPropertyRows(db, "feature", 8, where),
+    normalizedUsageRows(db, 10, where),
     db.prepare(`
       SELECT platform, app_version, COUNT(DISTINCT client_id) AS clients, COUNT(*) AS events
       FROM analytics_events
+      WHERE ${where}
       GROUP BY platform, app_version
       ORDER BY events DESC, platform ASC, app_version DESC
       LIMIT 6
@@ -235,33 +267,35 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
     db.prepare(`
       SELECT event_name AS label, COUNT(*) AS count
       FROM analytics_events
-      WHERE event_name IN ('login_success', 'login_failed', 'session_expired', 'session_reconnect_success', 'session_reconnect_failed')
+      WHERE ${where} AND event_name IN ('login_success', 'login_failed', 'session_expired', 'session_reconnect_success', 'session_reconnect_failed')
       GROUP BY event_name
       ORDER BY count DESC, event_name ASC
     `).all<CountRow>(),
     db.prepare(`
       SELECT event_name AS label, COUNT(*) AS count
       FROM analytics_events
-      WHERE event_name IN ('ota_check', 'ota_update_click')
+      WHERE ${where} AND event_name IN ('ota_check', 'ota_update_click')
       GROUP BY event_name
       ORDER BY count DESC, event_name ASC
     `).all<CountRow>(),
     db.prepare(`
-      SELECT strftime('%Y-%m-%d %H:00', created_at) AS bucket, COUNT(*) AS count
+      SELECT ${trendBucket} AS bucket, COUNT(*) AS count, COUNT(DISTINCT student_hash) AS users
       FROM analytics_events
-      WHERE created_at >= datetime('now', '-24 hours')
+      WHERE ${where}
       GROUP BY bucket
       ORDER BY bucket ASC
     `).all<TrendRow>(),
   ]);
 
   return {
+    period,
     summary: summary ?? emptySummary(),
     eventDistribution: eventDistribution.results ?? [],
     platformDistribution: platformDistribution.results ?? [],
     gradeDistribution: gradeDistribution.results ?? [],
     screenDistribution: screenDistribution.results ?? [],
     featureDistribution: featureDistribution.results ?? [],
+    normalizedUsage: normalizedUsage.results ?? [],
     versions: versions.results ?? [],
     authStats: authStats.results ?? [],
     otaStats: otaStats.results ?? [],
@@ -270,22 +304,22 @@ async function loadDashboardData(db: D1Database): Promise<AnalyticsDashboardData
   };
 }
 
-function gradeRows(db: D1Database, limit: number): Promise<D1Result<CountRow>> {
+function gradeRows(db: D1Database, limit: number, where: string): Promise<D1Result<CountRow>> {
   return db.prepare(`
     SELECT grade_prefix AS label, COUNT(DISTINCT student_hash) AS count
     FROM analytics_events
-    WHERE grade_prefix IS NOT NULL AND student_hash IS NOT NULL
+    WHERE ${where} AND grade_prefix IS NOT NULL AND student_hash IS NOT NULL
     GROUP BY grade_prefix
     ORDER BY count DESC, grade_prefix ASC
     LIMIT ?
   `).bind(limit).all<CountRow>();
 }
 
-function platformRows(db: D1Database, limit: number): Promise<D1Result<CountRow>> {
+function platformRows(db: D1Database, limit: number, where: string): Promise<D1Result<CountRow>> {
   return db.prepare(`
     SELECT platform AS label, COUNT(DISTINCT student_hash) AS count
     FROM analytics_events
-    WHERE platform IS NOT NULL AND student_hash IS NOT NULL
+    WHERE ${where} AND platform IS NOT NULL AND student_hash IS NOT NULL
     GROUP BY platform
     ORDER BY count DESC, platform ASC
     LIMIT ?
@@ -303,19 +337,92 @@ function countRows(db: D1Database, column: string, limit: number, where = "1 = 1
   `).bind(limit).all<CountRow>();
 }
 
-function jsonPropertyRows(db: D1Database, key: string, limit: number): Promise<D1Result<CountRow>> {
+function jsonPropertyRows(db: D1Database, key: string, limit: number, where: string): Promise<D1Result<CountRow>> {
   return db.prepare(`
     SELECT json_extract(properties, ?) AS label, COUNT(*) AS count
     FROM analytics_events
-    WHERE json_extract(properties, ?) IS NOT NULL AND json_extract(properties, ?) != ''
+    WHERE ${where} AND json_extract(properties, ?) IS NOT NULL AND json_extract(properties, ?) != ''
     GROUP BY label
     ORDER BY count DESC, label ASC
     LIMIT ?
   `).bind(`$.${key}`, `$.${key}`, `$.${key}`, limit).all<CountRow>();
 }
 
+function normalizedUsageRows(db: D1Database, limit: number, where: string): Promise<D1Result<UsageRow>> {
+  return db.prepare(`
+    SELECT
+      label,
+      COUNT(*) AS count,
+      COUNT(DISTINCT student_hash) AS users,
+      SUM(CASE WHEN platform = 'android' THEN 1 ELSE 0 END) AS android,
+      SUM(CASE WHEN platform = 'ios' THEN 1 ELSE 0 END) AS ios
+    FROM (
+      SELECT
+        platform,
+        student_hash,
+        CASE
+          WHEN event_name = 'screen_view' THEN
+            CASE json_extract(properties, '$.screen')
+              WHEN 'HomeRoute' THEN '查看首页'
+              WHEN '首页' THEN '查看首页'
+              WHEN 'AACRoute' THEN '查看爱安财'
+              WHEN '爱安财' THEN '查看爱安财'
+              WHEN 'MoreRoute' THEN '查看更多'
+              WHEN '更多' THEN '查看更多'
+              WHEN 'SettingsRoute' THEN '查看我的'
+              WHEN '我的' THEN '查看我的'
+              ELSE '查看' || json_extract(properties, '$.screen')
+            END
+          WHEN event_name = 'feature_action' THEN
+            CASE json_extract(properties, '$.feature')
+              WHEN '课表查询' THEN '课表查询'
+              WHEN '课程表' THEN '课表查询'
+              WHEN '学期课表' THEN '课表查询'
+              WHEN '电费查询' THEN '电费查询'
+              WHEN '宿舍电费' THEN '电费查询'
+              WHEN '自动教师评价' THEN '教师评价'
+              WHEN '教师评价' THEN '教师评价'
+              WHEN '自动评教' THEN '教师评价'
+              WHEN '宿舍门卡' THEN '宿舍门卡'
+              WHEN '门卡' THEN '宿舍门卡'
+              ELSE json_extract(properties, '$.feature')
+            END
+          ELSE NULL
+        END AS label
+      FROM analytics_events
+      WHERE ${where} AND event_name IN ('screen_view', 'feature_action')
+    ) AS normalized
+    WHERE label IS NOT NULL AND label != ''
+    GROUP BY label
+    ORDER BY users DESC, count DESC, label ASC
+    LIMIT ?
+  `).bind(limit).all<UsageRow>();
+}
+
+function parsePeriodRange(value: string | null): PeriodRange {
+  if (value === "week" || value === "month") return value;
+  return "day";
+}
+
+function periodInfo(range: PeriodRange): PeriodInfo {
+  if (range === "week") return { range, label: "近 7 天", bucketLabel: "DAY" };
+  if (range === "month") return { range, label: "本月", bucketLabel: "DAY" };
+  return { range, label: "今日", bucketLabel: "HOUR" };
+}
+
+function periodWhere(range: PeriodRange): string {
+  if (range === "week") return "created_at >= datetime('now', '-6 days', 'start of day')";
+  if (range === "month") return "created_at >= datetime('now', 'start of month')";
+  return "created_at >= datetime('now', 'start of day')";
+}
+
+function trendBucketExpression(range: PeriodRange): string {
+  if (range === "day") return "strftime('%H:00', created_at)";
+  return "strftime('%Y-%m-%d', created_at)";
+}
+
 function emptySummary(): SummaryRow {
-  return { total_events: 0, clients: 0, users: 0, events_24h: 0, events_7d: 0, last_event_at: null };
+  return { total_events: 0, clients: 0, users: 0, events_24h: 0, events_7d: 0, dau: 0, wau: 0, mau: 0, last_event_at: null };
 }
 
 async function authenticateRequest(request: Request, body: string, env: Env): Promise<Response | null> {

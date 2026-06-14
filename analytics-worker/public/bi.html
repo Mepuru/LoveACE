@@ -38,8 +38,11 @@
     .workspace { background: var(--paper); padding: 18px; border-top: 1px solid rgba(255,255,255,.12); }
     .notice { display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px 18px; color: var(--muted); font-size: 13px; }
     .notice strong { color: var(--ink); }
+    .range-tabs { display: flex; gap: 8px; padding: 0 16px 18px; }
+    .range-tab { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 8px 14px; color: var(--muted); cursor: pointer; font: 12px/1 var(--mono); transition: border-color .18s ease, color .18s ease, background .18s ease; }
+    .range-tab.active { border-color: rgba(244,81,30,.7); background: rgba(244,81,30,.08); color: var(--ink); }
     .grid { display: grid; gap: 14px; }
-    .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .main { grid-template-columns: minmax(0, 2fr) minmax(320px, .95fr); margin-top: 14px; }
     .lower { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 0 rgba(28,28,30,.04), 0 10px 28px rgba(28,28,30,.045); transition: border-color .2s ease; }
@@ -57,6 +60,7 @@
     .trend svg { width: 100%; height: 100%; display: block; overflow: visible; }
     .bar-list { display: grid; gap: 12px; }
     .bar-row { display: grid; grid-template-columns: minmax(92px, 1fr) 96px 54px; align-items: center; gap: 10px; }
+    .usage-row { display: grid; grid-template-columns: minmax(120px, 1fr) 96px 58px 58px 58px; align-items: center; gap: 10px; }
     .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #343235; font-size: 13px; }
     .bar-track { height: 8px; border-radius: 999px; background: var(--soft); overflow: hidden; }
     .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ink), #4a4540); transition: width .35s ease; }
@@ -67,7 +71,7 @@
     .platform-chip { width: fit-content; border: 1px solid #ded7cf; border-radius: 999px; padding: 4px 8px; color: var(--muted); font: 10px/1 var(--mono); text-transform: uppercase; }
     .code { font-family: var(--mono); }
     .privacy { margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ddd6ce; color: var(--muted); font: 11px/1.45 var(--mono); }
-    @media (max-width: 900px) { .metrics, .main, .lower { grid-template-columns: 1fr; } .topbar, .notice { align-items: flex-start; flex-direction: column; } }
+    @media (max-width: 900px) { .metrics, .main, .lower { grid-template-columns: 1fr; } .topbar, .notice { align-items: flex-start; flex-direction: column; } .usage-row { grid-template-columns: 1fr 72px 44px 44px 44px; } }
   </style>
 </head>
 <body>
@@ -85,11 +89,16 @@
         <div><strong>匿名汇总视图。</strong>只展示聚合统计，不展示原始事件、明文学号、client_id、student_hash、IP 或 UA 明细。</div>
         <div class="code" id="last-event">LAST_EVENT=---</div>
       </div>
+      <div class="range-tabs" aria-label="报表区间">
+        <button class="range-tab active" type="button" data-range="day">DAY · 今日</button>
+        <button class="range-tab" type="button" data-range="week">WEEK · 近 7 天</button>
+        <button class="range-tab" type="button" data-range="month">MONTH · 本月</button>
+      </div>
 
       <section class="grid metrics" id="metrics"></section>
       <section class="grid main">
-        <article class="card panel"><div class="panel-head"><h2>24 小时事件趋势</h2><span class="stamp">BUCKET: HOUR</span></div><div class="trend" id="trend"></div></article>
-        <article class="card panel"><div class="panel-head"><h2>功能 / 页面排行</h2><span class="stamp">TOP_USAGE</span></div><div id="usage"></div><div class="privacy">DATA_RULE: COUNT(client_id) WHERE hash_enabled=true; NO_RAW_LOGS_RETAINED</div></article>
+        <article class="card panel"><div class="panel-head"><h2>区间事件趋势</h2><span class="stamp" id="trend-stamp">BUCKET: HOUR</span></div><div class="trend" id="trend"></div></article>
+        <article class="card panel"><div class="panel-head"><h2>归一化功能排行</h2><span class="stamp">NORMALIZED_USAGE</span></div><div id="usage"></div><div class="privacy">DATA_RULE: screen/feature aliases normalized; users=COUNT(DISTINCT student_hash); A/I=Android/iOS events</div></article>
       </section>
       <section class="grid lower">
         <article class="card panel"><div class="panel-head"><h2>事件分布</h2><span class="stamp">EVENT_NAME</span></div><div id="events"></div></article>
@@ -107,25 +116,37 @@
   <script>
     const numberFormat = new Intl.NumberFormat("zh-CN");
     const byId = (id) => document.getElementById(id);
+    let activeRange = "day";
+
+    document.querySelectorAll(".range-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeRange = button.dataset.range || "day";
+        document.querySelectorAll(".range-tab").forEach((node) => node.classList.toggle("active", node === button));
+        syncDashboard().catch((error) => { byId("generated-at").textContent = `SYNC_ERROR · ${error.message}`; });
+      });
+    });
 
     async function syncDashboard() {
-      const response = await fetch("/bi/data", { cache: "no-store" });
+      const response = await fetch(`/bi/data?range=${encodeURIComponent(activeRange)}`, { cache: "no-store" });
       if (!response.ok) throw new Error(`BI data request failed: ${response.status}`);
       render(await response.json());
     }
 
     function render(data) {
       const summary = data.summary || {};
-      byId("generated-at").textContent = `Live · ${formatDate(data.generatedAt)}`;
+      const period = data.period || { label: "今日", bucketLabel: "HOUR" };
+      byId("generated-at").textContent = `Live · ${period.label} · ${formatDate(data.generatedAt)}`;
       byId("last-event").textContent = `LAST_EVENT=${summary.last_event_at ? `${summary.last_event_at} UTC` : "---"}`;
+      byId("trend-stamp").textContent = `BUCKET: ${period.bucketLabel || "HOUR"}`;
       byId("metrics").innerHTML = [
-        metric("总事件", summary.total_events, "COUNT(*) · 100% anonymous"),
-        metric("匿名客户端", summary.clients, "COUNT(DISTINCT client_id)"),
-        metric("匿名用户", summary.users, "COUNT(DISTINCT student_hash)"),
-        metric("近 24h 事件", summary.events_24h, `7D=${formatNumber(summary.events_7d)}`),
+        metric("区间事件", summary.total_events, `${period.label} · COUNT(*)`),
+        metric("区间用户", summary.users, "COUNT(DISTINCT student_hash)"),
+        metric("DAU", summary.dau, "today active users"),
+        metric("WAU", summary.wau, "last 7 days active users"),
+        metric("MAU", summary.mau, "month active users"),
       ].join("");
       byId("trend").innerHTML = trend(data.trend || []);
-      byId("usage").innerHTML = bars(mergeUsage(data.featureDistribution || [], data.screenDistribution || []), true);
+      byId("usage").innerHTML = usageRows(data.normalizedUsage || []);
       byId("events").innerHTML = bars(data.eventDistribution || [], true);
       byId("platforms").innerHTML = bars(data.platformDistribution || [], false);
       byId("grades").innerHTML = bars(data.gradeDistribution || [], false);
@@ -154,6 +175,18 @@
       }).join("")}</div>`;
     }
 
+    function usageRows(rows) {
+      if (!rows.length) return `<div class="hint">--- NO_NORMALIZED_USAGE ---</div>`;
+      const max = Math.max(1, ...rows.map((row) => Number(row.users) || 0));
+      return `<div class="bar-list">${rows.map((row, index) => {
+        const users = Number(row.users) || 0;
+        const width = Math.max(4, Math.round((users / max) * 100));
+        const fillClass = index === 0 ? "bar-fill hot" : "bar-fill";
+        const label = row.label || "未标记";
+        return `<div class="usage-row"><div class="bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="bar-track"><div class="${fillClass}" style="width:${width}%"></div></div><div class="bar-count">U ${formatNumber(users)}</div><div class="bar-count">A ${formatNumber(row.android)}</div><div class="bar-count">I ${formatNumber(row.ios)}</div></div>`;
+      }).join("")}</div>`;
+    }
+
     function trend(rows) {
       const max = Math.max(1, ...rows.map((row) => Number(row.count) || 0));
       const points = rows.length > 1 ? rows.map((row, index) => {
@@ -167,12 +200,6 @@
     function versions(rows) {
       if (!rows.length) return `<div class="hint">--- NO_VERSION_DATA ---</div>`;
       return rows.map((row) => `<div class="version-row"><span class="platform-chip">${escapeHtml(row.platform || "unknown")}</span><strong class="code">v${escapeHtml(row.app_version || "unknown")}</strong><span class="bar-count">CLIENTS ${formatNumber(row.clients)}</span><span class="bar-count">EVENTS ${formatNumber(row.events)}</span></div>`).join("");
-    }
-
-    function mergeUsage(features, screens) {
-      return [...features.map((row) => ({ label: `feature:${row.label}`, count: row.count })), ...screens.map((row) => ({ label: `screen:${row.label}`, count: row.count }))]
-        .sort((left, right) => Number(right.count) - Number(left.count))
-        .slice(0, 8);
     }
 
     function lastSegment(points) {
