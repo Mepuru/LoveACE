@@ -150,8 +150,8 @@ jobs:
           codesign --force --timestamp --options runtime --entitlements "$ENTITLEMENTS" --sign "$CERT_IDENTITY" "$APP_PATH"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
-      - name: Notarize app bundle
-        timeout-minutes: 45
+      - name: Submit app notarization
+        timeout-minutes: 10
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
@@ -167,43 +167,11 @@ jobs:
             --key "$KEY_PATH" \
             --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
             --issuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-            --output-format json > /tmp/notary-submit.json
+            --output-format json > build/macos/notary-submit.json
 
-          SUBMISSION_ID=$(python3 -c "import json; print(json.load(open('/tmp/notary-submit.json'))['id'])")
+          SUBMISSION_ID=$(python3 -c "import json; print(json.load(open('build/macos/notary-submit.json'))['id'])")
           echo "Notary submission id: $SUBMISSION_ID"
-
-          for attempt in $(seq 1 60); do
-            xcrun notarytool info "$SUBMISSION_ID" \
-              --key "$KEY_PATH" \
-              --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
-              --issuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
-              --output-format json > /tmp/notary-info.json
-
-            STATUS=$(python3 -c "import json; print(json.load(open('/tmp/notary-info.json'))['status'])")
-            echo "Notary status [$attempt/60]: $STATUS"
-
-            if [ "$STATUS" = "Accepted" ]; then
-              break
-            fi
-
-            if [ "$STATUS" = "Invalid" ] || [ "$STATUS" = "Rejected" ]; then
-              xcrun notarytool log "$SUBMISSION_ID" \
-                --key "$KEY_PATH" \
-                --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
-                --issuer "$APP_STORE_CONNECT_API_ISSUER_ID"
-              exit 1
-            fi
-
-            if [ "$attempt" = "60" ]; then
-              echo "Notarization timed out" >&2
-              exit 1
-            fi
-
-            sleep 30
-          done
-
-          xcrun stapler staple "$APP_PATH"
-          spctl --assess --type execute --verbose "$APP_PATH"
+          printf '%s\n' "$SUBMISSION_ID" > build/macos/notary-submission-id.txt
 
       - name: Install create-dmg
         run: brew install create-dmg
@@ -237,7 +205,11 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.version.outputs.artifact_name }}
-          path: desktop/build/macos/loveace-${{ steps.version.outputs.version }}.dmg
+          path: |
+            desktop/build/macos/loveace-${{ steps.version.outputs.version }}.dmg
+            desktop/build/macos/loveace-${{ steps.version.outputs.version }}.app.zip
+            desktop/build/macos/notary-submit.json
+            desktop/build/macos/notary-submission-id.txt
 
       - name: Confirm dry run
         run: |
