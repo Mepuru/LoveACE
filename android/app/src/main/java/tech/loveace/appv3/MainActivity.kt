@@ -281,9 +281,6 @@ fun RibbonApp(
         composable<TeacherEvaluationRoute> {
             TeacherEvaluationScreen(authViewModel, onBack = { navController.popBackStack() })
         }
-        composable<SmartCourseSelectionRoute> {
-            SmartCourseSelectionScreen(authViewModel, onBack = { navController.popBackStack() })
-        }
         composable<QRScanRoute> {
             val parentEntry = remember(it) { navController.getBackStackEntry(LaborClubRoute) }
             val laborVm: tech.loveace.appv3.ui.viewmodel.LaborClubViewModel = viewModel(parentEntry)

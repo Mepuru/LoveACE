@@ -25,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import tech.loveace.appv3.R
 import tech.loveace.appv3.analytics.Analytics
-import tech.loveace.appv3.ui.screen.SmartCourseSelectionScreen
 import tech.loveace.appv3.ui.theme.ThemeViewModel
 import tech.loveace.appv3.ui.viewmodel.AuthViewModel
 import tech.loveace.appv3.ui.viewmodel.ProfileViewModel
@@ -68,7 +67,6 @@ fun LandscapeShell(
         LandscapeNavItem("课程表", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, trackFeature = true),
         LandscapeNavItem("培养方案", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, trackFeature = true),
         LandscapeNavItem("自动评教", Icons.Filled.RateReview, Icons.Outlined.RateReview, trackFeature = true),
-        LandscapeNavItem("智能选课", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome, trackFeature = true),
         LandscapeNavItem("一卡通", Icons.Filled.CreditCard, Icons.Outlined.CreditCard, "校园生活", trackFeature = true),
         LandscapeNavItem("电费查询", Icons.Filled.ElectricBolt, Icons.Outlined.ElectricBolt, trackFeature = true),
         LandscapeNavItem("零星维修", Icons.Filled.Build, Icons.Outlined.Build, trackFeature = true),
@@ -177,14 +175,13 @@ fun LandscapeShell(
                 4 -> LandscapeScheduleScreen(authViewModel)
                 5 -> LandscapePlanScreen(authViewModel)
                 6 -> LandscapeTeacherEvaluationScreen(authViewModel)
-                7 -> SmartCourseSelectionScreen(authViewModel, onBack = {}, showBackButton = false)
-                8 -> LandscapeYKTScreen(authViewModel)
-                9 -> LandscapeElectricityScreen(authViewModel)
-                10 -> LandscapeRepairScreen(authViewModel)
-                11 -> LandscapeDoorCardScreen(authViewModel)
-                12 -> LandscapeCompetitionScreen(authViewModel)
-                13 -> LandscapeLaborClubScreen(authViewModel, profileViewModel)
-                14 -> LandscapeSettingsScreen(authViewModel, themeViewModel, profileViewModel)
+                7 -> LandscapeYKTScreen(authViewModel)
+                8 -> LandscapeElectricityScreen(authViewModel)
+                9 -> LandscapeRepairScreen(authViewModel)
+                10 -> LandscapeDoorCardScreen(authViewModel)
+                11 -> LandscapeCompetitionScreen(authViewModel)
+                12 -> LandscapeLaborClubScreen(authViewModel, profileViewModel)
+                13 -> LandscapeSettingsScreen(authViewModel, themeViewModel, profileViewModel)
             }
         }
     }
