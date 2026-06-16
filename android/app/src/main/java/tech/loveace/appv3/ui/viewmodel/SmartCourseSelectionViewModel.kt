@@ -281,6 +281,6 @@ class SmartCourseSelectionViewModel(application: Application) : AndroidViewModel
 
     companion object {
         const val SMART_SELECT_WEB_URL = "https://analyst-api.linota.cn/smart-select"
-        private const val SMART_SELECT_WS_BASE = "wss://analyst-api.linota.cn/v1/smart-select/ws/mobile"
+        private const val SMART_SELECT_WS_BASE = "wss://analyst-api.loveace.top/v1/smart-select/ws/mobile"
     }
 }

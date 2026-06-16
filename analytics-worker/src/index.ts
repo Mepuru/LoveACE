@@ -457,7 +457,6 @@ async function createSmartSelectSession(request: Request, env: Env): Promise<Res
     ) VALUES (?, ?, ?, 'waiting_mobile', 1, ?)`,
   ).bind(sessionId, await sha256Hex(webToken), await sha256Hex(pairingToken), expiresAt).run();
 
-  const origin = new URL(request.url).origin;
   const qrPayload = `loveace://smart-select?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(pairingToken)}`;
   const qrSvg = await QRCode.toString(qrPayload, {
     type: "svg",
@@ -473,7 +472,7 @@ async function createSmartSelectSession(request: Request, env: Env): Promise<Res
     expires_at: expiresAt,
     qr_payload: qrPayload,
     qr_svg: qrSvg,
-    web_ws_url: `${origin.replace(/^http/, "ws")}/v1/smart-select/ws/web?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(webToken)}`,
+    web_ws_url: `wss://analyst-api.loveace.top/v1/smart-select/ws/web?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(webToken)}`,
   }, 200, { "Cache-Control": "no-store" });
 }
 
