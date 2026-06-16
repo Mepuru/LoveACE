@@ -17,6 +17,15 @@ MAX_EVENTS_PER_REQUEST = "50"
 NONCE_TTL_SECONDS = "600"
 RATE_LIMIT_PER_MINUTE = "60"
 TIMESTAMP_SKEW_SECONDS = "300"
+SMART_SELECT_SESSION_TTL_SECONDS = "7200"
+
+[[durable_objects.bindings]]
+name = "SMART_SELECT_SESSIONS"
+class_name = "SmartSelectSession"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SmartSelectSession"]
 
 [[d1_databases]]
 binding = "DB"

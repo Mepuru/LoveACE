@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LoveACE 智能选课</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js" defer></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: oklch(98.4% 0.008 210);
+      --paper: oklch(99.2% 0.006 210);
+      --paper-soft: oklch(96.8% 0.012 205);
+      --line: oklch(91.8% 0.014 210);
+      --text: oklch(27% 0.018 205);
+      --muted: oklch(58% 0.02 210);
+      --primary: oklch(58% 0.075 210);
+      --primary-soft: oklch(92% 0.035 210);
+      --success: oklch(66% 0.095 125);
+      --success-soft: oklch(93% 0.042 125);
+      --warning: oklch(70% 0.09 42);
+      --warning-soft: oklch(94% 0.04 42);
+      --shadow: 0 18px 54px oklch(40% 0.03 210 / 0.08);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", "Microsoft YaHei UI", sans-serif;
+      letter-spacing: 0.018em;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 5%, oklch(94% 0.035 78 / 0.8), transparent 32rem),
+        radial-gradient(circle at 90% 10%, oklch(91% 0.04 205 / 0.72), transparent 34rem),
+        var(--bg);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 36px 0 48px; }
+    .hero { display: flex; justify-content: space-between; gap: var(--space-xl); align-items: end; margin-bottom: var(--space-xl); }
+    .eyebrow { color: var(--primary); font-weight: 800; font-size: 0.78rem; }
+    h1 { margin: 8px 0 10px; font-size: clamp(2rem, 5vw, 4.8rem); line-height: 0.95; letter-spacing: -0.04em; }
+    .hero p { max-width: 64ch; margin: 0; color: var(--muted); line-height: 1.8; }
+
+    .button {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 16px;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      box-shadow: 0 6px 20px oklch(30% 0.02 210 / 0.04);
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .button:hover { transform: translateY(-1px); border-color: oklch(84% 0.03 210); }
+    .button.primary { background: var(--primary); border-color: var(--primary); color: oklch(99% 0.005 210); }
+    .button:active, .pill:active { transform: scale(0.97); }
+
+    .panel {
+      background: color-mix(in oklch, var(--paper) 92%, transparent);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+    .connect { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-xl); padding: var(--space-xl); align-items: center; }
+    #qr { width: 220px; height: 220px; padding: 12px; border-radius: 24px; background: var(--paper); border: 1px solid var(--line); }
+    .status-card { display: grid; gap: var(--space-md); }
+    .status-line { display: flex; align-items: center; gap: var(--space-md); font-size: 1.12rem; font-weight: 800; }
+    .dot { width: 12px; height: 12px; border-radius: 999px; background: var(--warning); box-shadow: 0 0 0 8px color-mix(in oklch, var(--warning-soft), transparent 20%); }
+    .dot.ready { background: var(--success); box-shadow: 0 0 0 8px color-mix(in oklch, var(--success-soft), transparent 20%); }
+    .breath { height: 6px; border-radius: 999px; background: var(--paper-soft); overflow: hidden; }
+    .breath::after { content: ""; display: block; width: 38%; height: 100%; border-radius: inherit; background: var(--primary); animation: breathe 1.5s ease-in-out infinite; }
+    @keyframes breathe { 0% { transform: translateX(-100%); opacity: .35; } 50% { opacity: 1; } 100% { transform: translateX(270%); opacity: .35; } }
+
+    .app { display: none; grid-template-columns: 280px minmax(0, 1fr) 340px; gap: var(--space-xl); align-items: start; }
+    .sidebar, .tray { position: sticky; top: 20px; display: grid; gap: var(--space-lg); }
+    .section { padding: var(--space-xl); }
+    .section h2 { margin: 0 0 14px; font-size: 1.05rem; }
+    .meta { color: var(--muted); font-size: .88rem; line-height: 1.7; }
+    .progress { height: 6px; border-radius: 999px; background: var(--paper-soft); overflow: hidden; margin: 14px 0 8px; }
+    .progress span { display: block; height: 100%; border-radius: inherit; background: var(--success); }
+    .filters { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: var(--paper); color: var(--muted); transition: transform 150ms ease, background 150ms ease; }
+    .pill.active { color: var(--primary); background: var(--primary-soft); border-color: color-mix(in oklch, var(--primary), white 70%); }
+    select { width: 100%; border: 1px solid var(--line); background: var(--paper); border-radius: 14px; padding: 10px 12px; color: var(--text); }
+
+    .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-lg); }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg); }
+    .search { width: min(420px, 100%); border: 1px solid var(--line); border-radius: 999px; padding: 11px 16px; background: var(--paper); }
+    .course-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; display: grid; gap: 12px; min-height: 190px; transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease; }
+    .course-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px oklch(40% 0.03 210 / 0.08); }
+    .course-card.selected { background: var(--primary-soft); border-color: color-mix(in oklch, var(--primary), white 58%); }
+    .course-card.conflict { background: var(--warning-soft); border-color: color-mix(in oklch, var(--warning), white 58%); }
+    .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+    .path { color: var(--muted); font-size: .74rem; line-height: 1.5; }
+    .credit { flex: none; border-radius: 999px; padding: 4px 9px; background: var(--paper-soft); color: var(--primary); font-size: .74rem; font-weight: 800; }
+    .course-title { margin: 0; font-size: 1.08rem; line-height: 1.4; }
+    .course-info { color: var(--muted); font-size: .84rem; line-height: 1.8; }
+    .card-bottom { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-top: auto; }
+    .add { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper-soft); color: var(--primary); font-size: 1.25rem; }
+    .selected .add { background: var(--primary); color: var(--paper); }
+    .conflict-note { color: color-mix(in oklch, var(--warning), black 18%); font-size: .78rem; }
+
+    .mini-list { display: grid; gap: 8px; }
+    .mini-item { padding: 10px 12px; border-radius: 14px; background: var(--paper-soft); display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+    .receipt { white-space: pre-wrap; background: var(--paper); border: 1px dashed oklch(84% 0.018 210); border-radius: 20px; padding: 18px; color: var(--text); font-size: .86rem; max-height: 360px; overflow: auto; }
+    .empty { text-align: center; color: var(--muted); padding: 56px 20px; border: 1px dashed var(--line); border-radius: var(--radius-xl); background: color-mix(in oklch, var(--paper), transparent 18%); }
+
+    @media (max-width: 1120px) { .app { grid-template-columns: 1fr; } .sidebar, .tray { position: static; } }
+    @media (max-width: 760px) { .shell { width: min(100% - 24px, 1440px); padding-top: 20px; } .hero, .toolbar { align-items: stretch; flex-direction: column; } .connect { grid-template-columns: 1fr; justify-items: center; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">LoveACE Smart Course Selection</div>
+        <h1>像整理单词卡片一样，整理下学期。</h1>
+        <p>用手机安全读取教务数据，在电脑上清爽地筛课、查冲突、导出选课清单。数据只保存在短期会话中，不进入匿名 BI。</p>
+      </div>
+      <button id="newSession" class="button primary">生成新的二维码</button>
+    </header>
+
+    <section id="connect" class="panel connect">
+      <canvas id="qr"></canvas>
+      <div class="status-card">
+        <div class="status-line"><span id="dot" class="dot"></span><span id="status">正在准备二维码...</span></div>
+        <div id="detail" class="meta">请稍候。</div>
+        <div class="breath"></div>
+        <div class="meta">手机端：更多功能 → 智能选课 → 扫码连接。</div>
+      </div>
+    </section>
+
+    <section id="app" class="app">
+      <aside class="sidebar">
+        <div class="panel section">
+          <h2 id="planTitle">培养方案</h2>
+          <div id="planMeta" class="meta">等待数据...</div>
+          <div class="progress"><span id="planProgress" style="width:0%"></span></div>
+          <div id="planCount" class="meta"></div>
+        </div>
+        <div class="panel section">
+          <h2>筛选</h2>
+          <div class="filters">
+            <button class="pill active" data-filter="planOnly">🎒 只看方案内</button>
+            <button class="pill active" data-filter="hidePassed">🙈 隐藏已通过</button>
+            <button class="pill active" data-filter="hideCompletedLeafCategory">✅ 隐藏已修满分类</button>
+            <button class="pill" data-filter="hideConflict">🌿 隐藏冲突</button>
+          </div>
+          <div style="height:12px"></div>
+          <select id="campus"><option value="">全部校区</option></select>
+        </div>
+      </aside>
+
+      <section>
+        <div class="toolbar">
+          <input id="search" class="search" placeholder="搜索课程名、教师、课程号..." />
+          <div id="resultCount" class="meta"></div>
+        </div>
+        <div id="courses" class="course-grid"></div>
+      </section>
+
+      <aside class="tray">
+        <div class="panel section">
+          <h2>我的临时课表</h2>
+          <div id="selectedList" class="mini-list"></div>
+        </div>
+        <div class="panel section">
+          <h2>选课小票</h2>
+          <pre id="receipt" class="receipt">还没有选课变化。</pre>
+          <div style="height:12px"></div>
+          <button id="copyReceipt" class="button">复制清单</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      session: null,
+      token: null,
+      ws: null,
+      data: null,
+      selectedCourses: [],
+      removedCourses: [],
+      filters: { planOnly: true, hidePassed: true, hideCompletedLeafCategory: true, hideConflict: false, campus: '' },
+      query: '',
+      index: null,
+    };
+
+    const $ = (id) => document.getElementById(id);
+    $('newSession').addEventListener('click', createSession);
+    $('search').addEventListener('input', e => { state.query = e.target.value.trim().toLowerCase(); renderCourses(); });
+    $('campus').addEventListener('change', e => { state.filters.campus = e.target.value; renderCourses(); });
+    $('copyReceipt').addEventListener('click', () => navigator.clipboard.writeText($('receipt').textContent));
+    document.querySelectorAll('.pill').forEach(btn => btn.addEventListener('click', () => {
+      const key = btn.dataset.filter;
+      state.filters[key] = !state.filters[key];
+      btn.classList.toggle('active', state.filters[key]);
+      renderCourses();
+    }));
+
+    async function createSession() {
+      setStatus('正在生成二维码...', '手机扫码后会自动上传课表和培养方案。');
+      $('app').style.display = 'none';
+      $('connect').style.display = 'grid';
+      const res = await fetch('/v1/smart-select/sessions', { method: 'POST' });
+      const session = await res.json();
+      if (!session.ok) throw new Error(session.error || '创建会话失败');
+      state.session = session.session_id;
+      state.token = session.web_token;
+      await waitForQRCode();
+      QRCode.toCanvas($('qr'), session.qr_payload, { width: 220, margin: 1, color: { dark: '#2C3333', light: '#F9FBFC' } });
+      setStatus('正在等待手机端连线中...', `二维码将在 ${new Date(session.expires_at).toLocaleTimeString()} 过期。`);
+      connectWebSocket(session.web_ws_url);
+    }
+
+    function connectWebSocket(url) {
+      state.ws?.close();
+      state.ws = new WebSocket(url);
+      state.ws.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'status') setStatus(msg.message || msg.status, '请保持手机端页面打开。');
+        if (msg.type === 'dataset') setStatus(msg.message, '数据正在一点点抵达。');
+        if (msg.type === 'ready') await loadSessionData();
+        if (msg.type === 'error') setStatus('连接出现问题', msg.message || '请重新扫码。', true);
+      };
+      state.ws.onclose = () => setStatus('网页连接已断开', '可以重新生成二维码再试。');
+    }
+
+    async function loadSessionData() {
+      const res = await fetch(`/v1/smart-select/session-data?session_id=${encodeURIComponent(state.session)}&token=${encodeURIComponent(state.token)}`);
+      const payload = await res.json();
+      if (!payload.ok) throw new Error(payload.error || '读取会话数据失败');
+      state.data = payload.data;
+      state.selectedCourses = payload.actions?.selected_courses || [];
+      state.removedCourses = payload.actions?.removed_courses || [];
+      state.index = indexPlan(state.data.plan_completion);
+      $('connect').style.display = 'none';
+      $('app').style.display = 'grid';
+      $('dot').classList.add('ready');
+      renderAll();
+    }
+
+    function setStatus(title, detail, error = false) {
+      $('status').textContent = title;
+      $('detail').textContent = detail;
+      $('dot').style.background = error ? 'var(--warning)' : '';
+    }
+
+    function waitForQRCode() {
+      return new Promise(resolve => {
+        if (window.QRCode) resolve();
+        else setTimeout(() => resolve(waitForQRCode()), 80);
+      });
+    }
+
+    function indexPlan(plan) {
+      const index = { planCodes: new Set(), path: new Map(), passed: new Map(), score: new Map(), leafDone: new Map() };
+      const visit = (cat, parent = '') => {
+        const path = parent ? `${parent} > ${cat.categoryName}` : cat.categoryName;
+        const leafDone = (cat.subcategories || []).length === 0 && cat.minCredits > 0 && cat.completedCredits >= cat.minCredits;
+        for (const course of cat.courses || []) {
+          if (!course.courseCode) continue;
+          index.planCodes.add(course.courseCode);
+          index.path.set(course.courseCode, path);
+          index.passed.set(course.courseCode, !!course.isPassed);
+          index.score.set(course.courseCode, course.score || null);
+          index.leafDone.set(course.courseCode, leafDone);
+        }
+        for (const sub of cat.subcategories || []) visit(sub, path);
+      };
+      for (const cat of plan?.categories || []) visit(cat);
+      return index;
+    }
+
+    function renderAll() {
+      const plan = state.data.plan_completion;
+      $('planTitle').textContent = plan.planName || '培养方案';
+      $('planMeta').textContent = `${plan.grade || ''} ${plan.major || ''}`.trim();
+      const pct = plan.totalCourses ? Math.round(plan.passedCourses / plan.totalCourses * 100) : 0;
+      $('planProgress').style.width = `${pct}%`;
+      $('planCount').textContent = `已通过 ${plan.passedCourses} 门 / 共 ${plan.totalCourses} 门`;
+      const campuses = [...new Set((state.data.available_courses || []).map(c => c.xqm).filter(Boolean))].sort();
+      $('campus').innerHTML = '<option value="">全部校区</option>' + campuses.map(c => `<option>${escapeHtml(c)}</option>`).join('');
+      renderCourses();
+    }
+
+    function renderCourses() {
+      const courses = (state.data?.available_courses || []).filter(courseFilter).sort((a, b) => (a.kcm || '').localeCompare(b.kcm || ''));
+      $('resultCount').textContent = `${courses.length} 张课程卡片`;
+      $('courses').innerHTML = courses.length ? courses.map(courseCard).join('') : '<div class="empty">没有符合条件的课程。试试关闭一个筛选胶囊。</div>';
+      document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => toggleCourse(btn.dataset.add)));
+      renderTray();
+    }
+
+    function courseFilter(c) {
+      const code = c.kch || '';
+      if (state.filters.planOnly && !state.index.planCodes.has(code)) return false;
+      if (state.filters.hidePassed && state.index.passed.get(code)) return false;
+      if (state.filters.hideCompletedLeafCategory && state.index.leafDone.get(code)) return false;
+      if (state.filters.campus && c.xqm !== state.filters.campus) return false;
+      if (state.query && !`${c.kch} ${c.kxh} ${c.kcm} ${c.skjs}`.toLowerCase().includes(state.query)) return false;
+      const conflict = conflictOf(c);
+      if (state.filters.hideConflict && conflict) return false;
+      return true;
+    }
+
+    function courseCard(c) {
+      const key = courseKey(c);
+      const selected = state.selectedCourses.includes(key);
+      const conflict = conflictOf(c);
+      const klass = `course-card ${selected ? 'selected' : ''} ${conflict ? 'conflict' : ''}`;
+      return `<article class="${klass}">
+        <div class="card-top"><div class="path">${escapeHtml(state.index.path.get(c.kch) || '培养方案外课程')}</div><div class="credit">${c.xf || 0} 学分</div></div>
+        <h3 class="course-title">${escapeHtml(c.kcm || '未命名课程')}</h3>
+        <div class="course-info">${escapeHtml(c.skjs || '教师待定')} · ${escapeHtml(c.xqm || '')}${escapeHtml(c.jxlm || '')}${escapeHtml(c.jasm || '')}<br>${escapeHtml(formatTime(c))}</div>
+        ${conflict ? `<div class="conflict-note">⚠️ 与《${escapeHtml(conflict.courseName)}》时间冲突</div>` : ''}
+        <div class="card-bottom"><span class="meta">${escapeHtml(c.kch || '')} / ${escapeHtml(c.kxh || '')}</span><button class="add" data-add="${escapeHtml(key)}">${selected ? '✓' : '＋'}</button></div>
+      </article>`;
+    }
+
+    function toggleCourse(key) {
+      state.selectedCourses = state.selectedCourses.includes(key) ? state.selectedCourses.filter(k => k !== key) : [...state.selectedCourses, key];
+      saveActions();
+      renderCourses();
+    }
+
+    async function saveActions() {
+      await fetch('/v1/smart-select/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: state.session, token: state.token, selected_courses: state.selectedCourses, removed_courses: state.removedCourses }) });
+    }
+
+    function renderTray() {
+      const byKey = new Map((state.data.available_courses || []).map(c => [courseKey(c), c]));
+      $('selectedList').innerHTML = state.selectedCourses.length ? state.selectedCourses.map(k => {
+        const c = byKey.get(k);
+        return `<div class="mini-item"><span>${escapeHtml(c?.kcm || k)}</span><button class="pill" data-add="${escapeHtml(k)}">移除</button></div>`;
+      }).join('') : '<div class="meta">还没有增选课程。</div>';
+      $('receipt').textContent = receiptText(byKey);
+    }
+
+    function receiptText(byKey) {
+      if (!state.selectedCourses.length && !state.removedCourses.length) return '还没有选课变化。';
+      const lines = ['===== 选课清单 =====', ''];
+      if (state.selectedCourses.length) {
+        lines.push('【需要选课】');
+        for (const key of state.selectedCourses) {
+          const c = byKey.get(key);
+          lines.push(`${c?.kch || ''}\t${c?.kxh || ''}\t${c?.kcm || key}\t${c?.skjs || ''}\t${c?.xf || 0}学分\t${formatTime(c || {})}`);
+        }
+      }
+      return lines.join('\n');
+    }
+
+    function conflictOf(course) {
+      const slots = effectiveSlots();
+      const next = toSlot(course);
+      return slots.find(slot => slot.key !== next.key && slot.weekday === next.weekday && slot.end >= next.start && next.end >= slot.start && weekConflict(slot.week, next.week));
+    }
+
+    function effectiveSlots() {
+      const slots = [];
+      for (const date of state.data?.student_schedule?.dateList || []) {
+        for (const course of date.selectCourseList || []) {
+          const key = `${course.id.coureNumber}_${course.id.coureSequenceNumber}`;
+          if (state.removedCourses.includes(key)) continue;
+          for (const tp of course.timeAndPlaceList || []) slots.push({ key, courseName: course.courseName, weekday: tp.classDay, start: tp.classSessions, end: tp.classSessions + tp.continuingSession - 1, week: tp.classWeek });
+        }
+      }
+      for (const key of state.selectedCourses) {
+        const c = (state.data.available_courses || []).find(x => courseKey(x) === key);
+        if (c) slots.push(toSlot(c));
+      }
+      return slots;
+    }
+
+    function toSlot(c) { return { key: courseKey(c), courseName: c.kcm || '', weekday: c.skxq || 0, start: c.skjc || 0, end: (c.skjc || 0) + (c.cxjc || 1) - 1, week: c.skzc || '' }; }
+    function weekConflict(a = '', b = '') { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] === '1' && b[i] === '1') return true; return false; }
+    function courseKey(c) { return `${c.kch || ''}_${c.kxh || ''}`; }
+    function formatTime(c) { const w = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'][c.skxq || 0] || ''; return `${w} 第${c.skjc || '?'}-${(c.skjc || 0) + (c.cxjc || 1) - 1}节 ${c.zcsm || ''}`.trim(); }
+    function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch])); }
+
+    createSession().catch(err => setStatus('创建会话失败', err.message, true));
+  </script>
+</body>
+</html>
