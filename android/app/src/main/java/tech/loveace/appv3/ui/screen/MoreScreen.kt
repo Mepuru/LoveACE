@@ -80,6 +80,15 @@ fun MoreScreen(onNavigateToDetail: (Any) -> Unit) {
                     iconBg = MaterialTheme.colorScheme.primaryContainer,
                     onClick = { navigateFeature("自动教师评价", TeacherEvaluationRoute, onNavigateToDetail) },
                 )
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                FeatureListItem(
+                    icon = Icons.Default.AutoAwesome,
+                    title = "智能选课",
+                    subtitle = "扫码连接网页，上传课表和培养方案数据",
+                    iconColor = MaterialTheme.colorScheme.secondary,
+                    iconBg = MaterialTheme.colorScheme.secondaryContainer,
+                    onClick = { navigateFeature("智能选课", SmartCourseSelectionRoute, onNavigateToDetail) },
+                )
             }
 
             // 校园生活

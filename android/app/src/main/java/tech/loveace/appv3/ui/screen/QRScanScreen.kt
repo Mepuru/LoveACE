@@ -41,7 +41,12 @@ import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QRScanScreen(onBack: () -> Unit, onScanned: (String) -> Unit) {
+fun QRScanScreen(
+    onBack: () -> Unit,
+    onScanned: (String) -> Unit,
+    title: String = "扫码签到",
+    hint: String = "请将二维码放入框内",
+) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -59,7 +64,7 @@ fun QRScanScreen(onBack: () -> Unit, onScanned: (String) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("扫码签到") },
+                title = { Text(title) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
             )
         },
@@ -77,7 +82,7 @@ fun QRScanScreen(onBack: () -> Unit, onScanned: (String) -> Unit) {
                         shape = RoundedCornerShape(8.dp),
                     ) {
                         Text(
-                            "请将二维码放入框内",
+                            hint,
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge,

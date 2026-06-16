@@ -452,6 +452,7 @@ data class StudentScheduleResponse(
 }
 
 // ==================== Plan Completion Models ====================
+@Serializable
 data class PlanCourse(
     val courseCode: String = "",
     val courseName: String = "",
@@ -463,6 +464,7 @@ data class PlanCourse(
     val statusDescription: String = "未修读",
 )
 
+@Serializable
 data class PlanCategory(
     val categoryId: String = "",
     val categoryName: String = "",
@@ -480,6 +482,7 @@ data class PlanCategory(
     val isCompleted get() = completedCredits >= minCredits
 }
 
+@Serializable
 data class PlanCompletionInfo(
     val planName: String = "",
     val major: String = "",
@@ -494,6 +497,7 @@ data class PlanCompletionInfo(
     val estimatedGraduationCredits: Double = 0.0,
 )
 
+@Serializable
 data class PlanOption(
     val planId: String,
     val planName: String,
@@ -501,6 +505,7 @@ data class PlanOption(
     val isCurrent: Boolean = false,
 )
 
+@Serializable
 data class PlanSelectionResponse(
     val options: List<PlanOption> = emptyList(),
     val hint: String? = null,
