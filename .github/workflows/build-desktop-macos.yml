@@ -137,7 +137,18 @@ jobs:
           PY
 
       - name: Build macOS release
-        run: flutter build macos --release
+        run: |
+          flutter build macos --release --config-only
+          xcodebuild \
+            -workspace macos/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -derivedDataPath build/macos \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= \
+            build
 
       - name: Sign app bundle with Developer ID
         run: |
