@@ -33,40 +33,8 @@ class StudentScheduleService(private val connection: AUFEConnection) {
 
             val result = withContext(Dispatchers.IO) {
                 try {
-                    // Step 1: 获取动态路径
-                    if (cachedDynamicPath == null) fetchDynamicPath()
-                    val dynPath = cachedDynamicPath ?: throw Exception("未能获取动态路径参数")
-
-                    // Step 2: 请求课表数据
-                    val indexUrl = "$BASE_URL/student/courseSelect/calendarSemesterCurriculum/index"
-                    val scheduleUrl = "$BASE_URL/student/courseSelect/thisSemesterCurriculum/$dynPath/ajaxStudentSchedule/past/callback"
-
-                    val response = connection.client.post(
-                        scheduleUrl,
-                        formData = mapOf("planCode" to termCode),
-                        headers = mapOf(
-                            "Referer" to indexUrl,
-                            "X-Requested-With" to "XMLHttpRequest",
-                            "Accept" to "application/json, text/javascript, */*; q=0.01",
-                        ),
-                    )
-                    val body = response.body?.string() ?: throw Exception("响应为空")
-                    val json = Json { ignoreUnknownKeys = true }
-                    val data = json.parseToJsonElement(body).jsonObject
-
-                    val errorMsg = data["errorMessage"]?.jsonPrimitive?.contentOrNull ?: ""
-                    if (errorMsg.isNotEmpty()) throw Exception("服务器返回错误: $errorMsg")
-
-                    val allUnits = data["allUnits"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-                    val dateList = data["dateList"]?.jsonArray ?: JsonArray(emptyList())
-
-                    val scheduleInfos = dateList.map { parseDateInfo(it.jsonObject, json) }
-                    val scheduleResp = StudentScheduleResponse(
-                        allUnits = allUnits,
-                        errorMessage = "",
-                        dateList = scheduleInfos,
-                    )
-                    UniResponse.success(scheduleResp)
+                    val resultData = fetchScheduleWithRetry(termCode)
+                    UniResponse.success(resultData)
                 } catch (e: Exception) {
                     cachedDynamicPath = null
                     Log.e(TAG, "getStudentSchedule failed", e)
@@ -82,6 +50,53 @@ class StudentScheduleService(private val connection: AUFEConnection) {
 
             result
         }
+
+    private fun fetchScheduleWithRetry(termCode: String): StudentScheduleResponse {
+        val json = Json { ignoreUnknownKeys = true }
+        if (cachedDynamicPath == null) fetchDynamicPath()
+        var dynPath = cachedDynamicPath ?: throw Exception("未能获取动态路径参数")
+
+        for (attempt in 1..MAX_RETRIES) {
+            val indexUrl = "$BASE_URL/student/courseSelect/calendarSemesterCurriculum/index"
+            val scheduleUrl = "$BASE_URL/student/courseSelect/thisSemesterCurriculum/$dynPath/ajaxStudentSchedule/past/callback"
+
+            val response = connection.client.post(
+                scheduleUrl,
+                formData = mapOf("planCode" to termCode),
+                headers = mapOf(
+                    "Referer" to indexUrl,
+                    "X-Requested-With" to "XMLHttpRequest",
+                    "Accept" to "application/json, text/javascript, */*; q=0.01",
+                ),
+            )
+            val body = response.body?.string() ?: throw Exception("响应为空")
+            val data = json.parseToJsonElement(body).jsonObject
+
+            val errorMsg = data["errorMessage"]?.jsonPrimitive?.contentOrNull ?: ""
+            if (errorMsg.isEmpty()) {
+                if (attempt > 1) Log.i(TAG, "刷新动态路径后重试成功")
+                val allUnits = data["allUnits"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+                val dateList = data["dateList"]?.jsonArray ?: JsonArray(emptyList())
+                val scheduleInfos = dateList.map { parseDateInfo(it.jsonObject, json) }
+                return StudentScheduleResponse(
+                    allUnits = allUnits,
+                    errorMessage = "",
+                    dateList = scheduleInfos,
+                )
+            }
+
+            // 服务器返回错误，可能是动态路径过期，刷新后重试
+            if (attempt < MAX_RETRIES) {
+                Log.w(TAG, "服务器返回错误: $errorMsg，尝试刷新动态路径后重试")
+                cachedDynamicPath = null
+                fetchDynamicPath()
+                dynPath = cachedDynamicPath ?: throw Exception("未能获取动态路径参数")
+            } else {
+                throw Exception("服务器返回错误: $errorMsg")
+            }
+        }
+        throw Exception("获取课表失败")
+    }
 
     private fun parseDateInfo(obj: JsonObject, json: Json): ScheduleDateInfo {
         val planCode = obj["programPlanCode"]?.jsonPrimitive?.contentOrNull ?: ""
@@ -148,6 +163,7 @@ class StudentScheduleService(private val connection: AUFEConnection) {
     companion object {
         private const val TAG = "StudentScheduleService"
         private const val CACHE_TTL_MS = 30_000L
+        private const val MAX_RETRIES = 2
         const val BASE_URL = "http://jwcxk2-aufe-edu-cn.vpn2.aufe.edu.cn:8118"
     }
 }
