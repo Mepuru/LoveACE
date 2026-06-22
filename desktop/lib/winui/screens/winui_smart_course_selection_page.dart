@@ -1578,22 +1578,22 @@ class _WinUISmartCourseSelectionPageState
             ),
           const SizedBox(height: 16),
           // 操作按钮
-          if (!isPassed)
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCourseActionButton(
-                    context,
-                    provider,
-                    courseKey,
-                    isNewlySelected: isNewlySelected,
-                    isFromOriginalSchedule: isFromOriginalSchedule,
-                    isRemoved: isRemoved,
-                    hasConflict: hasConflict,
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCourseActionButton(
+                  context,
+                  provider,
+                  courseKey,
+                  isNewlySelected: isNewlySelected,
+                  isFromOriginalSchedule: isFromOriginalSchedule,
+                  isRemoved: isRemoved,
+                  hasConflict: hasConflict,
+                  isPassed: isPassed,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1654,7 +1654,13 @@ class _WinUISmartCourseSelectionPageState
     required bool isFromOriginalSchedule,
     required bool isRemoved,
     required bool hasConflict,
+    required bool isPassed,
   }) {
+    // 已修课程不在当前课表中时，不提供任何操作
+    if (isPassed && !isFromOriginalSchedule && !isNewlySelected && !isRemoved) {
+      return const SizedBox.shrink();
+    }
+
     // 情况1：新增的课程 -> 显示"模拟退课"
     if (isNewlySelected) {
       return Button(
@@ -2355,7 +2361,16 @@ class _WinUISmartCourseSelectionPageState
       case 'passed':
         textColor = isDark ? Colors.teal.light : Colors.teal;
         icon = FluentIcons.check_mark;
-        trailingText = score != null ? '已修 $score' : '已修';
+        final creditText = course.credits != null ? '${course.credits}学分' : null;
+        if (score != null && creditText != null) {
+          trailingText = '已修 $score · $creditText';
+        } else if (score != null) {
+          trailingText = '已修 $score';
+        } else if (creditText != null) {
+          trailingText = '已修 · $creditText';
+        } else {
+          trailingText = '已修';
+        }
         bgColor = (isDark ? Colors.teal.light : Colors.teal).withValues(alpha: 0.08);
         break;
       default:
