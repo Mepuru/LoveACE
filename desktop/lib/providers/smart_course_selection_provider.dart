@@ -394,7 +394,10 @@ class SmartCourseSelectionProvider extends ChangeNotifier {
         final json = jsonDecode(jsonStr) as Map<String, dynamic>;
         _selectionData = SmartCourseSelectionData.fromJson(json);
         _selectedTermCode = _selectionData!.termCode;
-        LoggerService.info('📦 加载持久化数据成功，学期: $_selectedTermCode');
+        _usingClassCurriculum = _selectionData!.usingClassCurriculum;
+        _classCurriculumName = _selectionData!.classCurriculumName;
+        LoggerService.info(
+            '📦 加载持久化数据成功，学期: $_selectedTermCode，班级课表: $_usingClassCurriculum');
       } else {
         LoggerService.info('📭 没有持久化数据');
       }
@@ -600,6 +603,9 @@ class SmartCourseSelectionProvider extends ChangeNotifier {
       _selectionData = _selectionData!.copyWith(
         availableCourses: allCourses,
         courseDataRefreshTime: DateTime.now(),
+        usingClassCurriculum: false,
+        classCurriculumName: null,
+        classCurriculumCode: null,
       );
       _usingClassCurriculum = false;
       _classCurriculumName = null;
@@ -667,6 +673,9 @@ class SmartCourseSelectionProvider extends ChangeNotifier {
         termCode: planCode,
         availableCourses: courses,
         courseDataRefreshTime: DateTime.now(),
+        usingClassCurriculum: true,
+        classCurriculumName: className,
+        classCurriculumCode: classCode,
       );
       _selectedTermCode = planCode;
       _usingClassCurriculum = true;
@@ -881,6 +890,38 @@ class SmartCourseSelectionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 班级课表模式：重新拉取班级课表
+      if (_usingClassCurriculum && _selectionData?.classCurriculumCode != null) {
+        LoggerService.info('🔄 重置课表：重新拉取班级课表...');
+        final classCode = _selectionData!.classCurriculumCode!;
+        final planCode = _selectedTermCode!;
+        final response = await jwcService.classCurriculum.queryClassCurriculum(
+          planCode: planCode,
+          classCode: classCode,
+        );
+        if (!response.success || response.data == null) {
+          throw Exception(response.error ?? '获取班级课表失败');
+        }
+
+        final courses = response.data!;
+        _selectionData = _selectionData!.copyWith(
+          termCode: planCode,
+          availableCourses: courses,
+          courseDataRefreshTime: DateTime.now(),
+          currentSelectedCourses: [],
+          removedCourses: [],
+        );
+        _scheduleChanged = false;
+        _addedToSchedule = [];
+        _removedFromSchedule = [];
+
+        await _savePersistedData(userId);
+        _state = SmartCourseSelectionState.loaded;
+        LoggerService.info('✅ 班级课表已刷新，共 ${courses.length} 条');
+        notifyListeners();
+        return;
+      }
+
       // 1. 从服务器重新获取最新课表
       LoggerService.info('🔄 重置课表：从服务器获取最新课表...');
       final response = await jwcService.studentSchedule.getStudentSchedule(_selectedTermCode!);

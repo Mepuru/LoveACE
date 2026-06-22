@@ -1227,23 +1227,66 @@ class _WinUISmartCourseSelectionPageState
         // 更新选中的时间段，让右下角课程列表显示该时间段的课程
         provider.selectTimeSlot(tp.classDay, tp.classSessions);
         // 优先从 availableCourses 中查找完整的课程记录（包含 bkskyl 等字段）
-        final fullRecord = provider.availableCourses.firstWhere(
+        final matched = provider.availableCourses.firstWhere(
           (c) => c.kch == course.courseCode && c.kxh == course.courseSequence,
-          orElse: () => CourseScheduleRecord(
-            kch: course.courseCode,
-            kxh: course.courseSequence,
-            kcm: course.courseName,
-            xf: course.unit.toInt(),
-            skjs: course.attendClassTeacher,
-            xqm: tp.campusName,
-            jxlm: tp.teachingBuildingName,
-            jasm: tp.classroomName,
-            skxq: tp.classDay,
-            skjc: tp.classSessions,
-            cxjc: tp.continuingSession,
-            zcsm: tp.weekDescription,
-          ),
+          orElse: () => CourseScheduleRecord(),
         );
+        // 必须用学生课表的 courseSequence 作为 kxh，保证 courseKey 与 baseScheduleSnapshot 一致
+        final fullRecord = matched.kch != null
+            ? CourseScheduleRecord(
+                id: matched.id,
+                zxjxjhh: matched.zxjxjhh,
+                kch: matched.kch,
+                kxh: course.courseSequence,
+                kcm: matched.kcm ?? course.courseName,
+                xf: matched.xf ?? course.unit.toInt(),
+                xs: matched.xs,
+                kkxsh: matched.kkxsh,
+                kkxsjc: matched.kkxsjc,
+                kslxdm: matched.kslxdm,
+                kslxmc: matched.kslxmc,
+                skjs: matched.skjs ?? course.attendClassTeacher,
+                bkskrl: matched.bkskrl,
+                bkskyl: matched.bkskyl,
+                xkmsdm: matched.xkmsdm,
+                xkmssm: matched.xkmssm,
+                xkkzdm: matched.xkkzdm,
+                xkkzsm: matched.xkkzsm,
+                xkkzh: matched.xkkzh,
+                xkxzsm: matched.xkxzsm,
+                kkxqh: matched.kkxqh,
+                kkxqm: matched.kkxqm,
+                xqh: matched.xqh,
+                jxlh: matched.jxlh,
+                jash: matched.jash,
+                skzc: matched.skzc,
+                skxq: tp.classDay,
+                skjc: tp.classSessions,
+                cxjc: tp.continuingSession,
+                zcsm: tp.weekDescription,
+                kclbdm: matched.kclbdm,
+                kclbmc: matched.kclbmc,
+                xkbz: matched.xkbz,
+                xqm: tp.campusName,
+                jxlm: tp.teachingBuildingName,
+                jasm: tp.classroomName,
+                mxbj: matched.mxbj,
+                xss: matched.xss,
+              )
+            : CourseScheduleRecord(
+                kch: course.courseCode,
+                kxh: course.courseSequence,
+                kcm: course.courseName,
+                xf: course.unit.toInt(),
+                skjs: course.attendClassTeacher,
+                xqm: tp.campusName,
+                jxlm: tp.teachingBuildingName,
+                jasm: tp.classroomName,
+                skxq: tp.classDay,
+                skjc: tp.classSessions,
+                cxjc: tp.continuingSession,
+                zcsm: tp.weekDescription,
+              );
         provider.selectCourse(fullRecord);
       },
       child: Container(

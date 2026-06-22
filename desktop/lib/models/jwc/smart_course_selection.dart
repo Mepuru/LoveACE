@@ -117,6 +117,18 @@ class SmartCourseSelectionData {
   @JsonKey(name: 'snapshot_time')
   final DateTime? snapshotTime;
 
+  /// 是否使用班级课表作为当前可选课程数据源
+  @JsonKey(name: 'using_class_curriculum')
+  final bool usingClassCurriculum;
+
+  /// 班级课表名称
+  @JsonKey(name: 'class_curriculum_name')
+  final String? classCurriculumName;
+
+  /// 班级课表代码
+  @JsonKey(name: 'class_curriculum_code')
+  final String? classCurriculumCode;
+
   SmartCourseSelectionData({
     required this.userId,
     required this.termCode,
@@ -128,6 +140,9 @@ class SmartCourseSelectionData {
     this.removedCourses = const [],
     this.baseScheduleSnapshot = const [],
     this.snapshotTime,
+    this.usingClassCurriculum = false,
+    this.classCurriculumName,
+    this.classCurriculumCode,
   });
 
   factory SmartCourseSelectionData.fromJson(Map<String, dynamic> json) =>
@@ -154,6 +169,9 @@ class SmartCourseSelectionData {
     List<String>? removedCourses,
     List<String>? baseScheduleSnapshot,
     DateTime? snapshotTime,
+    bool? usingClassCurriculum,
+    String? classCurriculumName,
+    String? classCurriculumCode,
   }) {
     return SmartCourseSelectionData(
       userId: userId,
@@ -168,6 +186,10 @@ class SmartCourseSelectionData {
       removedCourses: removedCourses ?? this.removedCourses,
       baseScheduleSnapshot: baseScheduleSnapshot ?? this.baseScheduleSnapshot,
       snapshotTime: snapshotTime ?? this.snapshotTime,
+      usingClassCurriculum:
+          usingClassCurriculum ?? this.usingClassCurriculum,
+      classCurriculumName: classCurriculumName ?? this.classCurriculumName,
+      classCurriculumCode: classCurriculumCode ?? this.classCurriculumCode,
     );
   }
 }
