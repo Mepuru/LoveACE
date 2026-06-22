@@ -118,7 +118,9 @@ class PlanService {
     bool forceRefresh = false,
   }) async {
     // 检查缓存（非强制刷新时）
-    if (!forceRefresh && _isCacheValid(planId) && _planCache.containsKey(planId)) {
+    if (!forceRefresh &&
+        _isCacheValid(planId) &&
+        _planCache.containsKey(planId)) {
       LoggerService.info('📦 使用缓存的培养方案数据 (planId: $planId)');
       return UniResponse.success(_planCache[planId]!, message: '培养方案获取成功（缓存）');
     }
@@ -129,7 +131,10 @@ class PlanService {
       await _waitForLock();
       // 等待后检查缓存
       if (_planCache.containsKey(planId)) {
-        return UniResponse.success(_planCache[planId]!, message: '培养方案获取成功（缓存）');
+        return UniResponse.success(
+          _planCache[planId]!,
+          message: '培养方案获取成功（缓存）',
+        );
       }
     }
 
@@ -224,7 +229,9 @@ class PlanService {
       // 解析培养方案选项
       final selectionResponse = _parsePlanSelectionHtml(htmlContent);
       if (selectionResponse != null) {
-        LoggerService.info('📚 检测到多培养方案，共 ${selectionResponse.options.length} 个选项');
+        LoggerService.info(
+          '📚 检测到多培养方案，共 ${selectionResponse.options.length} 个选项',
+        );
         return UniResponse.success(selectionResponse, message: '获取培养方案选项成功');
       }
 
@@ -240,7 +247,9 @@ class PlanService {
   }
 
   /// 执行获取培养方案的实际操作
-  Future<UniResponse<PlanCompletionInfo>> _performGetPlanCompletion({String? planId}) async {
+  Future<UniResponse<PlanCompletionInfo>> _performGetPlanCompletion({
+    String? planId,
+  }) async {
     try {
       String url;
       if (planId != null && planId.isNotEmpty) {
@@ -347,12 +356,14 @@ class PlanService {
           // 判断是否为当前使用的方案（绿色按钮表示当前使用）
           final isCurrent = button.classes.contains('btn-success');
 
-          options.add(PlanOption(
-            planId: planId,
-            planName: buttonText,
-            planType: planType,
-            isCurrent: isCurrent,
-          ));
+          options.add(
+            PlanOption(
+              planId: planId,
+              planName: buttonText,
+              planType: planType,
+              isCurrent: isCurrent,
+            ),
+          );
         }
       }
 
@@ -360,10 +371,7 @@ class PlanService {
         return null;
       }
 
-      return PlanSelectionResponse(
-        options: options,
-        hint: hint,
-      );
+      return PlanSelectionResponse(options: options, hint: hint);
     } catch (e) {
       LoggerService.error('📚 解析培养方案选择页面失败', error: e);
       return null;
@@ -496,7 +504,18 @@ class PlanService {
     }
 
     // 等级成绩
-    final passingGrades = ['优秀', '良好', '中等', '及格', '合格', '通过', 'A', 'B', 'C', 'D'];
+    final passingGrades = [
+      '优秀',
+      '良好',
+      '中等',
+      '及格',
+      '合格',
+      '通过',
+      'A',
+      'B',
+      'C',
+      'D',
+    ];
     return passingGrades.any(
       (g) => score.toUpperCase().contains(g.toUpperCase()),
     );
@@ -753,6 +772,17 @@ class PlanService {
 
       // 构建分类树（将在下一个子任务中实现）
       final categories = _buildCategoryTree(ztreeNodes);
+      if (categories.isEmpty) {
+        final parentIds = ztreeNodes
+            .map((node) => node['pId']?.toString() ?? '')
+            .toSet()
+            .take(8)
+            .join(', ');
+        throw Exception(
+          'zTree数据已解析但未找到根分类，可能根节点pId格式变化。'
+          '节点数: ${ztreeNodes.length}, pId样例: $parentIds',
+        );
+      }
 
       // 创建 PlanCompletionInfo 对象
       final planInfo = PlanCompletionInfo(
@@ -784,25 +814,35 @@ class PlanService {
       }
     }
 
-    // 识别真正的根节点（pId 为 "-1"）
-    final List<PlanCategory> rootCategories = [];
+    bool isCourseNode(Map<String, dynamic> node) =>
+        node['flagType']?.toString() == 'kch';
 
-    for (var node in nodes) {
-      final pId = node['pId']?.toString() ?? '';
-      // 只处理 pId 为 "-1" 的根节点
-      if (pId == '-1') {
-        final flagType = node['flagType']?.toString() ?? '';
+    List<Map<String, dynamic>> rootNodes = nodes
+        .where((node) => !isCourseNode(node))
+        .where((node) => node['pId']?.toString() == '-1')
+        .toList();
 
-        // 只处理分类节点，跳过课程节点
-        if (flagType != 'kch') {
-          // 递归构建包含所有子项的分类（会自动处理所有层级）
-          final category = _buildCategoryWithChildren(node, nodesById);
-          rootCategories.add(category);
-        }
-      }
+    if (rootNodes.isEmpty) {
+      rootNodes = nodes.where((node) => !isCourseNode(node)).where((node) {
+        final pId = node['pId']?.toString() ?? '';
+        return pId.isEmpty || !nodesById.containsKey(pId);
+      }).toList();
     }
 
-    return rootCategories;
+    if (rootNodes.isEmpty) {
+      rootNodes = nodes
+          .where((node) => !isCourseNode(node))
+          .where((node) => node['pId']?.toString() == '0')
+          .toList();
+    }
+
+    if (rootNodes.isEmpty) {
+      rootNodes = nodes.where((node) => !isCourseNode(node)).toList();
+    }
+
+    return rootNodes
+        .map((node) => _buildCategoryWithChildren(node, nodesById))
+        .toList();
   }
 
   /// 从单个节点构建分类对象（包含所有子项）

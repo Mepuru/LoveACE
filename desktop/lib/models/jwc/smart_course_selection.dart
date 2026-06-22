@@ -3,6 +3,8 @@ import 'course_schedule_record.dart';
 
 part 'smart_course_selection.g.dart';
 
+const Object _copyWithUnset = Object();
+
 /// 智能排课预设
 @JsonSerializable()
 class CourseSelectionPreset {
@@ -94,6 +96,10 @@ class SmartCourseSelectionData {
   @JsonKey(name: 'available_courses')
   final List<CourseScheduleRecord> availableCourses;
 
+  /// 班级课表数据（作为基准课表展示/冲突检测，不影响可选课程全集）
+  @JsonKey(name: 'class_curriculum_courses')
+  final List<CourseScheduleRecord> classCurriculumCourses;
+
   /// 预设列表
   final List<CourseSelectionPreset> presets;
 
@@ -117,7 +123,7 @@ class SmartCourseSelectionData {
   @JsonKey(name: 'snapshot_time')
   final DateTime? snapshotTime;
 
-  /// 是否使用班级课表作为当前可选课程数据源
+  /// 是否使用班级课表作为当前基准课表
   @JsonKey(name: 'using_class_curriculum')
   final bool usingClassCurriculum;
 
@@ -134,6 +140,7 @@ class SmartCourseSelectionData {
     required this.termCode,
     this.courseDataRefreshTime,
     this.availableCourses = const [],
+    this.classCurriculumCourses = const [],
     this.presets = const [],
     this.currentPresetId,
     this.currentSelectedCourses = const [],
@@ -152,10 +159,7 @@ class SmartCourseSelectionData {
 
   /// 创建空数据
   factory SmartCourseSelectionData.empty(String userId, String termCode) {
-    return SmartCourseSelectionData(
-      userId: userId,
-      termCode: termCode,
-    );
+    return SmartCourseSelectionData(userId: userId, termCode: termCode);
   }
 
   /// 复制并更新
@@ -163,6 +167,7 @@ class SmartCourseSelectionData {
     String? termCode,
     DateTime? courseDataRefreshTime,
     List<CourseScheduleRecord>? availableCourses,
+    List<CourseScheduleRecord>? classCurriculumCourses,
     List<CourseSelectionPreset>? presets,
     String? currentPresetId,
     List<String>? currentSelectedCourses,
@@ -170,8 +175,8 @@ class SmartCourseSelectionData {
     List<String>? baseScheduleSnapshot,
     DateTime? snapshotTime,
     bool? usingClassCurriculum,
-    String? classCurriculumName,
-    String? classCurriculumCode,
+    Object? classCurriculumName = _copyWithUnset,
+    Object? classCurriculumCode = _copyWithUnset,
   }) {
     return SmartCourseSelectionData(
       userId: userId,
@@ -179,6 +184,8 @@ class SmartCourseSelectionData {
       courseDataRefreshTime:
           courseDataRefreshTime ?? this.courseDataRefreshTime,
       availableCourses: availableCourses ?? this.availableCourses,
+      classCurriculumCourses:
+          classCurriculumCourses ?? this.classCurriculumCourses,
       presets: presets ?? this.presets,
       currentPresetId: currentPresetId ?? this.currentPresetId,
       currentSelectedCourses:
@@ -186,10 +193,13 @@ class SmartCourseSelectionData {
       removedCourses: removedCourses ?? this.removedCourses,
       baseScheduleSnapshot: baseScheduleSnapshot ?? this.baseScheduleSnapshot,
       snapshotTime: snapshotTime ?? this.snapshotTime,
-      usingClassCurriculum:
-          usingClassCurriculum ?? this.usingClassCurriculum,
-      classCurriculumName: classCurriculumName ?? this.classCurriculumName,
-      classCurriculumCode: classCurriculumCode ?? this.classCurriculumCode,
+      usingClassCurriculum: usingClassCurriculum ?? this.usingClassCurriculum,
+      classCurriculumName: identical(classCurriculumName, _copyWithUnset)
+          ? this.classCurriculumName
+          : classCurriculumName as String?,
+      classCurriculumCode: identical(classCurriculumCode, _copyWithUnset)
+          ? this.classCurriculumCode
+          : classCurriculumCode as String?,
     );
   }
 }

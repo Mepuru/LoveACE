@@ -45,6 +45,11 @@ SmartCourseSelectionData _$SmartCourseSelectionDataFromJson(
           ?.map((e) => CourseScheduleRecord.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  classCurriculumCourses:
+      (json['class_curriculum_courses'] as List<dynamic>?)
+          ?.map((e) => CourseScheduleRecord.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   presets:
       (json['presets'] as List<dynamic>?)
           ?.map(
@@ -68,13 +73,13 @@ SmartCourseSelectionData _$SmartCourseSelectionDataFromJson(
           ?.map((e) => e as String)
           .toList() ??
       const [],
-      snapshotTime: json['snapshot_time'] == null
-          ? null
-          : DateTime.parse(json['snapshot_time'] as String),
-      usingClassCurriculum: json['using_class_curriculum'] as bool? ?? false,
-      classCurriculumName: json['class_curriculum_name'] as String?,
-      classCurriculumCode: json['class_curriculum_code'] as String?,
-    );
+  snapshotTime: json['snapshot_time'] == null
+      ? null
+      : DateTime.parse(json['snapshot_time'] as String),
+  usingClassCurriculum: json['using_class_curriculum'] as bool? ?? false,
+  classCurriculumName: json['class_curriculum_name'] as String?,
+  classCurriculumCode: json['class_curriculum_code'] as String?,
+);
 
 Map<String, dynamic> _$SmartCourseSelectionDataToJson(
   SmartCourseSelectionData instance,
@@ -83,13 +88,14 @@ Map<String, dynamic> _$SmartCourseSelectionDataToJson(
   'term_code': instance.termCode,
   'course_data_refresh_time': instance.courseDataRefreshTime?.toIso8601String(),
   'available_courses': instance.availableCourses,
+  'class_curriculum_courses': instance.classCurriculumCourses,
   'presets': instance.presets,
   'current_preset_id': instance.currentPresetId,
   'current_selected_courses': instance.currentSelectedCourses,
   'removed_courses': instance.removedCourses,
-      'base_schedule_snapshot': instance.baseScheduleSnapshot,
-      'snapshot_time': instance.snapshotTime?.toIso8601String(),
-      'using_class_curriculum': instance.usingClassCurriculum,
-      'class_curriculum_name': instance.classCurriculumName,
-      'class_curriculum_code': instance.classCurriculumCode,
-    };
+  'base_schedule_snapshot': instance.baseScheduleSnapshot,
+  'snapshot_time': instance.snapshotTime?.toIso8601String(),
+  'using_class_curriculum': instance.usingClassCurriculum,
+  'class_curriculum_name': instance.classCurriculumName,
+  'class_curriculum_code': instance.classCurriculumCode,
+};
