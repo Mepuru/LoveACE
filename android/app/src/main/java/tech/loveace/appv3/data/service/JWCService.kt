@@ -70,10 +70,19 @@ class JWCService(private val connection: AUFEConnection) {
                 val doc = Jsoup.parse(html)
                 val select = doc.selectFirst("select#planCode") ?: throw Exception("未找到学期选择框")
                 val options = select.select("option")
-                val terms = options.mapIndexedNotNull { index, option ->
-                    val code = option.attr("value").takeIf { it.isNotEmpty() } ?: return@mapIndexedNotNull null
-                    val name = option.text().trim().replace("春", "下").replace("秋", "上")
-                    TermItem(termCode = code, termName = name, isCurrent = index == 0)
+                val parsedTerms = options.mapNotNull { option ->
+                    val code = option.attr("value").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                    val rawName = option.text().trim()
+                    val name = rawName.replace("春", "下").replace("秋", "上")
+                    val isCurrent = option.hasAttr("selected") || rawName.contains("当前")
+                    TermItem(termCode = code, termName = name, isCurrent = isCurrent)
+                }
+                val terms = if (parsedTerms.any { it.isCurrent }) {
+                    parsedTerms
+                } else {
+                    parsedTerms.mapIndexed { index, term ->
+                        if (index == 0) term.copy(isCurrent = true) else term
+                    }
                 }
                 UniResponse.success(terms)
             } catch (e: Exception) {

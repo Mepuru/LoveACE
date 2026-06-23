@@ -71,11 +71,16 @@ class ScheduleViewModel(application: Application) : AndroidViewModel(application
             val result = svc.getStudentSchedule(termCode)
             if (result.success && result.data != null) {
                 val courses = result.data.courses
+                val shouldSyncWidget = _uiState.value.terms
+                    .firstOrNull { it.termCode == termCode }
+                    ?.isCurrent == true
                 scheduleStore.saveCourses(courses)
-                WidgetDataStore.saveCourses(getApplication(), json.encodeToString(courses))
-                // 请求刷新 widget
-                SemesterDayWidget().updateAll(getApplication())
-                SemesterWeekWidget().updateAll(getApplication())
+                if (shouldSyncWidget) {
+                    WidgetDataStore.saveCourses(getApplication(), json.encodeToString(courses))
+                    // 请求刷新 widget
+                    SemesterDayWidget().updateAll(getApplication())
+                    SemesterWeekWidget().updateAll(getApplication())
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     courses = courses,
