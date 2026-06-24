@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import typer
 from rich import print
@@ -17,6 +18,11 @@ from manifest import Announcement, ChangelogEntry, LoveACEManifest, OTA, Platfor
 from s3_client import S3Client
 
 PLATFORMS = ["android", "ios", "windows", "macos", "linux"]
+NETWORK_BASE_URLS = {
+    "edgeone": "https://loveace.linota.cn",
+    "cloudflare": "https://release-oss.loveace.tech",
+}
+RELEASE_PATH_PREFIX = "/loveace/releases/"
 
 app = typer.Typer(help="LoveACE 发版管理工具")
 console = Console()
@@ -47,6 +53,18 @@ def save_manifest(client: S3Client, manifest: LoveACEManifest) -> str:
     """保存 manifest"""
     content = manifest.model_dump_json(indent=2, exclude_none=True)
     return client.upload_content(content, MANIFEST_KEY)
+
+
+def rewrite_release_url(url: str, target_base_url: str) -> Optional[str]:
+    """将安装包 URL 切到指定 CDN base，保留对象路径和 query/fragment。"""
+    parsed = urlsplit(url)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    if not parsed.path.startswith(RELEASE_PATH_PREFIX):
+        return None
+
+    target = urlsplit(target_base_url.rstrip("/"))
+    return urlunsplit((target.scheme, target.netloc, parsed.path, parsed.query, parsed.fragment))
 
 
 @app.command()
@@ -249,6 +267,79 @@ def release(
         f"[cyan]下载地址:[/] {download_url}",
         title="OTA 发布",
     ))
+    print(f"[dim]Manifest URL: {url}[/]")
+
+
+@app.command()
+def network_guard(
+    mode: str = typer.Option(..., "--mode", "-m", help="网络模式: edgeone 或 cloudflare"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="仅预览，不上传 manifest"),
+):
+    """切换 manifest 中 native 安装包下载 URL 的网络模式。"""
+    if mode not in NETWORK_BASE_URLS:
+        console.print(f"[red]❌ 不支持的网络模式: {mode}，支持: {', '.join(NETWORK_BASE_URLS)}[/]")
+        raise typer.Exit(1)
+
+    client = S3Client()
+    manifest = load_manifest(client)
+    if not manifest.ota:
+        console.print("[red]❌ 暂无 OTA 配置[/]")
+        raise typer.Exit(1)
+
+    target_base_url = NETWORK_BASE_URLS[mode]
+    changes: list[tuple[str, str, str, str, str]] = []
+    invalid_urls: list[tuple[str, str]] = []
+
+    for platform in PLATFORMS:
+        release = getattr(manifest.ota, platform, None)
+        if not release:
+            continue
+
+        release_type = release.type if hasattr(release, "type") else "native"
+        if release_type != "native":
+            changes.append((platform, release.version, "跳过", release.url, "web release"))
+            continue
+
+        new_url = rewrite_release_url(release.url, target_base_url)
+        if not new_url:
+            invalid_urls.append((platform, release.url))
+            continue
+
+        status_text = "不变" if new_url == release.url else "更新"
+        changes.append((platform, release.version, status_text, release.url, new_url))
+        release.url = new_url
+        setattr(manifest.ota, platform, release)
+
+    if invalid_urls:
+        table = Table(title="无法安全切换的 native URL")
+        table.add_column("平台", style="cyan")
+        table.add_column("当前 URL")
+        for platform, url in invalid_urls:
+            table.add_row(platform.upper(), url)
+        console.print(table)
+        console.print(f"[red]❌ native URL 必须以 {RELEASE_PATH_PREFIX} 路径开头，已取消上传[/]")
+        raise typer.Exit(1)
+
+    table = Table(title=f"Network guard: {mode} ({target_base_url})")
+    table.add_column("平台", style="cyan")
+    table.add_column("版本", style="green")
+    table.add_column("状态", style="yellow")
+    table.add_column("从")
+    table.add_column("到")
+    for platform, version, status_text, old_url, new_url in changes:
+        table.add_row(platform.upper(), version, status_text, old_url, new_url)
+    console.print(table)
+
+    changed = any(status_text == "更新" for _, _, status_text, _, _ in changes)
+    if dry_run:
+        console.print("[yellow]DRY RUN：未上传 manifest[/]")
+        return
+    if not changed:
+        console.print("[green]✅ manifest 已是目标网络模式，无需上传[/]")
+        return
+
+    url = save_manifest(client, manifest)
+    console.print(f"[green]✅ manifest 下载 URL 已切换到 {mode} 模式[/]")
     print(f"[dim]Manifest URL: {url}[/]")
 
 
