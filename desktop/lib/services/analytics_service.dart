@@ -71,7 +71,7 @@ class AnalyticsService {
     final prefix = userId.length >= 4 ? userId.substring(0, 4) : null;
     _gradePrefix = (prefix != null && RegExp(r'^\d{4}$').hasMatch(prefix)) ? prefix : null;
     _studentHash = AnalyticsConfig.hashSalt.isNotEmpty
-        ? sha256.convert(utf8.encode('$userId${AnalyticsConfig.hashSalt}')).toString()
+        ? md5.convert(utf8.encode('$userId${AnalyticsConfig.hashSalt}')).toString()
         : null;
   }
 
