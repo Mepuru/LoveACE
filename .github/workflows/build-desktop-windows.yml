@@ -78,7 +78,7 @@ jobs:
           $innoPath = 'C:\Program Files (x86)\Inno Setup 6'
           "$innoPath" >> $env:GITHUB_PATH
 
-          $langUrl = 'https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl'
+          $langUrl = 'https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/ChineseSimplified.isl'
           $langPath = "$innoPath\Languages\ChineseSimplified.isl"
           Invoke-WebRequest -Uri $langUrl -OutFile $langPath
 
