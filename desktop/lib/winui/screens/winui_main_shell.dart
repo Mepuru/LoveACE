@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/manifest_provider.dart';
+import '../../services/analytics_service.dart';
 import '../widgets/winui_background.dart';
 import '../widgets/winui_ota_dialog.dart';
 import '../widgets/winui_announcement_dialog.dart';
@@ -38,27 +39,54 @@ class _WinUIMainShellState extends State<WinUIMainShell> {
   final _userMenuController = FlyoutController();
 
   // 导航项对应的页面
+  static const List<String> _pageNames = [
+    '首页',
+    '爱安财',
+    '学期成绩',
+    '考试安排',
+    '自动评教',
+    '培养方案',
+    '智能排课',
+    '竞赛获奖',
+    '一卡通',
+    '电费查询',
+    '劳动俱乐部',
+    '设置',
+  ];
+
   final List<Widget> _pages = [
-    const WinUIHomePage(), // 首页（学业信息）
-    const WinUIAACPage(), // 爱安财
-    const WinUITermListPage(), // 学期成绩
-    const WinUIExamPage(), // 考试安排
-    const WinUITeacherEvaluationPage(), // 自动评教
-    const WinUITrainingPlanPage(), // 培养方案
-    const WinUISmartCourseSelectionPage(), // 智能排课
-    const WinUICompetitionPage(), // 竞赛获奖
-    const WinUIYKTPage(), // 一卡通
-    const WinUIElectricityPage(), // 电费查询
-    const WinUILaborClubPage(), // 劳动俱乐部
-    const WinUISettingsPage(), // 设置
+    const WinUIHomePage(),
+    const WinUIAACPage(),
+    const WinUITermListPage(),
+    const WinUIExamPage(),
+    const WinUITeacherEvaluationPage(),
+    const WinUITrainingPlanPage(),
+    const WinUISmartCourseSelectionPage(),
+    const WinUICompetitionPage(),
+    const WinUIYKTPage(),
+    const WinUIElectricityPage(),
+    const WinUILaborClubPage(),
+    const WinUISettingsPage(),
   ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _trackScreen(0);
       _checkManifest();
     });
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _selectedIndex = index);
+    _trackScreen(index);
+  }
+
+  void _trackScreen(int index) {
+    if (index >= 0 && index < _pageNames.length) {
+      AnalyticsService.instance.trackScreen(_pageNames[index]);
+    }
   }
 
   /// 检查 Manifest（公告和 OTA 更新）
@@ -228,7 +256,7 @@ class _WinUIMainShellState extends State<WinUIMainShell> {
           child: NavigationView(
             pane: NavigationPane(
               selected: _selectedIndex,
-              onChanged: (index) => setState(() => _selectedIndex = index),
+              onChanged: _onPageChanged,
               displayMode: PaneDisplayMode.compact,
               header: _buildHeader(context),
               items: _buildNavigationItems(),

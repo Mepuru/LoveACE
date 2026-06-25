@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/manifest_model.dart';
+import '../services/analytics_service.dart';
 import '../services/logger_service.dart';
 
 /// OTA 更新对话框
@@ -101,7 +102,10 @@ class OTAUpdateDialog extends StatelessWidget {
               child: const Text('稍后更新'),
             ),
           FilledButton.icon(
-            onPressed: () => _copyToClipboard(context, release.url),
+            onPressed: () {
+              AnalyticsService.instance.trackOtaUpdateClick(currentVersion, release.version);
+              _copyToClipboard(context, release.url);
+            },
             icon: const Icon(Icons.copy, size: 18),
             label: const Text('复制链接'),
           ),

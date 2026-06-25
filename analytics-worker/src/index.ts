@@ -19,7 +19,7 @@ interface EventIn {
 
 interface EventsIn {
   client_id: string;
-  platform: "android" | "ios";
+  platform: "android" | "ios" | "desktop" | "windows" | "macos" | "linux";
   app_version: string;
   build?: string | null;
   os_version?: string | null;
@@ -508,7 +508,7 @@ async function recordNonce(db: D1Database, nonce: string, ttlSeconds: number): P
 
 function validatePayload(payload: EventsIn, maxEvents: number): string | null {
   if (!isString(payload.client_id, 8, 128)) return "invalid_client_id";
-  if (payload.platform !== "android" && payload.platform !== "ios") return "invalid_platform";
+  if (!["android", "ios", "desktop", "windows", "macos", "linux"].includes(payload.platform)) return "invalid_platform";
   if (!isString(payload.app_version, 1, 64)) return "invalid_app_version";
   if (payload.build != null && !isString(payload.build, 0, 64)) return "invalid_build";
   if (payload.os_version != null && !isString(payload.os_version, 0, 128)) return "invalid_os_version";

@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/analytics_service.dart';
 import '../../services/session_manager.dart';
 import '../../constants/app_constants.dart';
 import '../widgets/winui_background.dart';
@@ -28,6 +29,7 @@ class _WinUIHomeScreenState extends State<WinUIHomeScreen> {
     super.initState();
     // 在页面初始化时检查认证状态
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsService.instance.trackAppStart('normal');
       _checkAuthStatus();
     });
   }

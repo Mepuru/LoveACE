@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../providers/auth_provider.dart';
+import 'analytics_service.dart';
 import 'logger_service.dart';
 
 /// Session Manager for periodic session validation
@@ -78,7 +79,7 @@ class SessionManager {
 
     if (!isValid) {
       LoggerService.info('❌ Session expired, stopping periodic checks');
-      // Session expired, stop checking
+      AnalyticsService.instance.trackSessionExpired('health_check_failed');
       stopSessionCheck();
     } else {
       LoggerService.info('✅ Session is still valid');
