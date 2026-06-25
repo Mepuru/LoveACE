@@ -149,6 +149,7 @@ class AuthProvider extends ChangeNotifier {
       LoggerService.info('❌ Login error: $e');
       LoggerService.info('❌ Stack trace: $stackTrace');
       _setState(AuthState.error);
+      AnalyticsService.instance.trackLoginFailed(userId, '登录异常');
       return false;
     }
   }

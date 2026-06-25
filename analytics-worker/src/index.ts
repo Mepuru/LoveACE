@@ -71,6 +71,7 @@ interface UsageRow {
   users: number;
   android: number;
   ios: number;
+  desktop: number;
 }
 
 interface AnalyticsDashboardData {
@@ -355,7 +356,8 @@ function normalizedUsageRows(db: D1Database, limit: number, where: string): Prom
       COUNT(*) AS count,
       COUNT(DISTINCT student_hash) AS users,
       SUM(CASE WHEN platform = 'android' THEN 1 ELSE 0 END) AS android,
-      SUM(CASE WHEN platform = 'ios' THEN 1 ELSE 0 END) AS ios
+      SUM(CASE WHEN platform = 'ios' THEN 1 ELSE 0 END) AS ios,
+      SUM(CASE WHEN platform IN ('windows', 'macos', 'linux', 'desktop') THEN 1 ELSE 0 END) AS desktop
     FROM (
       SELECT
         platform,
