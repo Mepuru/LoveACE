@@ -34,6 +34,7 @@ import 'services/labor_club/labor_club_service.dart';
 import 'services/labor_club/ldjlb_config.dart';
 import 'services/ykt/ykt_service.dart';
 import 'services/cache_manager.dart';
+import 'services/jwc/teacher_evaluation_service.dart';
 import 'services/logger_service.dart';
 import 'services/manifest_service.dart';
 import 'utils/platform/platform_util.dart';

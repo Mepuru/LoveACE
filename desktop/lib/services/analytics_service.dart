@@ -176,7 +176,7 @@ class AnalyticsService {
             'X-LoveACE-Signature': signature,
           },
         ),
-      ).catchError((e) {
+      ).then((_) {}).catchError((e) {
         if (e is DioException) {
           LoggerService.debug('Analytics event dropped: status=${e.response?.statusCode} type=${e.type} message=${e.message}');
         } else {
