@@ -1,6 +1,7 @@
 name: 内部使用
 description: 维护者记录问题、待办功能、技术债或改进项
 title: "[内部] "
+labels: ["internal", "status: triage"]
 body:
   - type: markdown
     attributes:

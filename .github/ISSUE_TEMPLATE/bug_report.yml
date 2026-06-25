@@ -1,6 +1,7 @@
 name: 问题反馈
 description: 反馈崩溃、异常、无法使用或体验问题
 title: "[问题反馈] "
+labels: ["bug", "status: triage"]
 body:
   - type: markdown
     attributes:
