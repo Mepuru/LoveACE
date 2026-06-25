@@ -65,7 +65,17 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build Windows release
-        run: flutter build windows --release
+        shell: pwsh
+        env:
+          ANALYTICS_API_KEY: ${{ secrets.ANALYTICS_API_KEY }}
+          ANALYTICS_SIGNING_SECRET: ${{ secrets.ANALYTICS_SIGNING_SECRET }}
+          ANALYTICS_HASH_SALT: ${{ secrets.ANALYTICS_HASH_SALT }}
+        run: >
+          flutter build windows --release
+          --dart-define=ANALYTICS_ENDPOINT=https://analyst-api.linota.cn/v1/events
+          --dart-define=ANALYTICS_API_KEY=$env:ANALYTICS_API_KEY
+          --dart-define=ANALYTICS_SIGNING_SECRET=$env:ANALYTICS_SIGNING_SECRET
+          --dart-define=ANALYTICS_HASH_SALT=$env:ANALYTICS_HASH_SALT
 
       - name: Install Inno Setup
         shell: pwsh
