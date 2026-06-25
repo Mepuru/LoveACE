@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
 import '../models/manifest_model.dart';
+import '../services/analytics_service.dart';
 import '../services/manifest_service.dart';
 import '../services/logger_service.dart';
 
@@ -118,9 +119,17 @@ class ManifestProvider extends ChangeNotifier {
             LoggerService.info('📱 当前版本: $currentVersion, 最新版本: ${platformRelease.version}');
             LoggerService.info('📱 当前平台: $currentPlatform');
             LoggerService.info('📱 有更新: $hasOTAUpdate, 强制更新: $isForceUpdate');
+            AnalyticsService.instance.trackOtaCheck(
+              hasOTAUpdate ? 'update_available' : 'up_to_date',
+              currentVersion,
+              latestVersion: platformRelease.version,
+            );
           } else {
             LoggerService.info('📱 当前平台 $currentPlatform 暂无发布');
+            AnalyticsService.instance.trackOtaCheck('no_release', currentVersion);
           }
+        } else {
+          AnalyticsService.instance.trackOtaCheck('no_ota_config', currentVersion);
         }
       } else {
         _state = ManifestState.error;

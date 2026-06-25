@@ -22,7 +22,7 @@ import 'providers/course_schedule_provider.dart';
 import 'providers/smart_course_selection_provider.dart';
 import 'providers/ykt_provider.dart';
 import 'providers/teacher_evaluation_provider.dart';
-import 'services/session_manager.dart';
+import 'services/analytics_service.dart';
 import 'services/jwc/jwc_service.dart';
 import 'services/aac/aac_service.dart';
 import 'services/aac/aac_config.dart';
@@ -33,8 +33,8 @@ import 'services/isim/isim_config.dart';
 import 'services/labor_club/labor_club_service.dart';
 import 'services/labor_club/ldjlb_config.dart';
 import 'services/ykt/ykt_service.dart';
-import 'services/jwc/teacher_evaluation_service.dart';
 import 'services/cache_manager.dart';
+import 'services/jwc/teacher_evaluation_service.dart';
 import 'services/logger_service.dart';
 import 'services/manifest_service.dart';
 import 'utils/platform/platform_util.dart';
@@ -50,6 +50,9 @@ void main() async {
 
   // 初始化 SharedPreferences
   final prefs = await SharedPreferences.getInstance();
+
+  // 初始化 AnalyticsService
+  await AnalyticsService.init(prefs, appVersion: AppConstants.appVersion);
 
   // 创建 ManifestService
   final manifestService = ManifestService(
@@ -310,15 +313,6 @@ class MyApp extends StatelessWidget {
           },
         ),
 
-        // Session Manager - depends on AuthProvider
-        ProxyProvider<AuthProvider, SessionManager>(
-          update: (context, authProvider, previous) {
-            // Dispose previous session manager if it exists
-            previous?.dispose();
-            return SessionManager(authProvider);
-          },
-          dispose: (context, sessionManager) => sessionManager.dispose(),
-        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

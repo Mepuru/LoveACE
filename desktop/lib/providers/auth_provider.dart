@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/aufe/user_credentials.dart';
+import '../services/analytics_service.dart';
 import '../services/aufe/connector.dart';
 import '../services/cache_manager.dart';
 import '../services/logger_service.dart';
@@ -113,6 +114,7 @@ class AuthProvider extends ChangeNotifier {
         LoggerService.info('❌ EC login failed: $_errorMessage');
         _setState(AuthState.error);
         await connection.close();
+        AnalyticsService.instance.trackLoginFailed(userId, _errorMessage ?? 'ec_login_failed');
         return false;
       }
 
@@ -126,6 +128,7 @@ class AuthProvider extends ChangeNotifier {
         LoggerService.info('❌ UAAP login failed: $_errorMessage');
         _setState(AuthState.error);
         await connection.close();
+        AnalyticsService.instance.trackLoginFailed(userId, _errorMessage ?? 'uaap_login_failed');
         return false;
       }
 
@@ -139,12 +142,14 @@ class AuthProvider extends ChangeNotifier {
       _setState(AuthState.authenticated);
 
       LoggerService.info('✅ Login successful!');
+      AnalyticsService.instance.trackLoginSuccess(userId);
       return true;
     } catch (e, stackTrace) {
       _errorMessage = '登录过程出错: $e';
       LoggerService.info('❌ Login error: $e');
       LoggerService.info('❌ Stack trace: $stackTrace');
       _setState(AuthState.error);
+      AnalyticsService.instance.trackLoginFailed(userId, '登录异常');
       return false;
     }
   }
@@ -183,6 +188,8 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
       _setState(AuthState.unauthenticated);
 
+      AnalyticsService.instance.clearUser();
+      AnalyticsService.instance.trackFeature('auth', 'logout');
       LoggerService.info('✅ 登出完成');
     } catch (e) {
       LoggerService.error('❌ 登出过程出错', error: e);
@@ -283,9 +290,11 @@ class AuthProvider extends ChangeNotifier {
 
       if (success) {
         LoggerService.info('✅ 静默重登录成功');
+        AnalyticsService.instance.trackSessionReconnectSuccess();
         return true;
       } else {
         LoggerService.warning('❌ 静默重登录失败');
+        AnalyticsService.instance.trackSessionReconnectFailed();
         await _handleSilentReloginFailed();
         return false;
       }

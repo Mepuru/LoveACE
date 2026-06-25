@@ -19,7 +19,7 @@ interface EventIn {
 
 interface EventsIn {
   client_id: string;
-  platform: "android" | "ios";
+  platform: "android" | "ios" | "desktop" | "windows" | "macos" | "linux";
   app_version: string;
   build?: string | null;
   os_version?: string | null;
@@ -71,6 +71,7 @@ interface UsageRow {
   users: number;
   android: number;
   ios: number;
+  desktop: number;
 }
 
 interface AnalyticsDashboardData {
@@ -355,7 +356,8 @@ function normalizedUsageRows(db: D1Database, limit: number, where: string): Prom
       COUNT(*) AS count,
       COUNT(DISTINCT student_hash) AS users,
       SUM(CASE WHEN platform = 'android' THEN 1 ELSE 0 END) AS android,
-      SUM(CASE WHEN platform = 'ios' THEN 1 ELSE 0 END) AS ios
+      SUM(CASE WHEN platform = 'ios' THEN 1 ELSE 0 END) AS ios,
+      SUM(CASE WHEN platform IN ('windows', 'macos', 'linux', 'desktop') THEN 1 ELSE 0 END) AS desktop
     FROM (
       SELECT
         platform,
@@ -371,20 +373,44 @@ function normalizedUsageRows(db: D1Database, limit: number, where: string): Prom
               WHEN '更多' THEN '查看更多'
               WHEN 'SettingsRoute' THEN '查看我的'
               WHEN '我的' THEN '查看我的'
+              WHEN '设置' THEN '查看我的'
+              WHEN '成绩查询' THEN '查看成绩查询'
+              WHEN '学期成绩' THEN '查看成绩查询'
+              WHEN '考试安排' THEN '查看考试安排'
+              WHEN '课表查询' THEN '查看课表查询'
+              WHEN '课程表' THEN '查看课表查询'
+              WHEN '学期课表' THEN '查看课表查询'
+              WHEN '培养方案' THEN '查看培养方案'
+              WHEN '自动教师评价' THEN '查看教师评价'
+              WHEN '教师评价' THEN '查看教师评价'
+              WHEN '自动评教' THEN '查看教师评价'
+              WHEN '一卡通' THEN '查看一卡通'
+              WHEN '电费查询' THEN '查看电费查询'
+              WHEN '宿舍电费' THEN '查看电费查询'
+              WHEN '零星维修' THEN '查看零星维修'
+              WHEN '报修' THEN '查看零星维修'
+              WHEN '宿舍门卡' THEN '查看宿舍门卡'
+              WHEN '门卡' THEN '查看宿舍门卡'
+              WHEN '竞赛信息' THEN '查看竞赛信息'
+              WHEN '竞赛获奖' THEN '查看竞赛信息'
+              WHEN '劳动俱乐部' THEN '查看劳动俱乐部'
               ELSE '查看' || json_extract(properties, '$.screen')
             END
           WHEN event_name = 'feature_action' THEN
-            CASE json_extract(properties, '$.feature')
-              WHEN '课表查询' THEN '课表查询'
-              WHEN '课程表' THEN '课表查询'
-              WHEN '学期课表' THEN '课表查询'
-              WHEN '电费查询' THEN '电费查询'
-              WHEN '宿舍电费' THEN '电费查询'
-              WHEN '自动教师评价' THEN '教师评价'
-              WHEN '教师评价' THEN '教师评价'
-              WHEN '自动评教' THEN '教师评价'
-              WHEN '宿舍门卡' THEN '宿舍门卡'
-              WHEN '门卡' THEN '宿舍门卡'
+            CASE
+              WHEN json_extract(properties, '$.feature') IN ('成绩查询', '学期成绩') THEN '成绩查询'
+              WHEN json_extract(properties, '$.feature') = '考试安排' THEN '考试安排'
+              WHEN json_extract(properties, '$.feature') IN ('课表查询', '课程表', '学期课表') THEN '课表查询'
+              WHEN json_extract(properties, '$.feature') = '培养方案' THEN '培养方案'
+              WHEN json_extract(properties, '$.feature') IN ('自动教师评价', '教师评价', '自动评教') THEN '教师评价'
+              WHEN json_extract(properties, '$.feature') = '一卡通' THEN '一卡通'
+              WHEN json_extract(properties, '$.feature') IN ('电费查询', '宿舍电费') THEN '电费查询'
+              WHEN json_extract(properties, '$.feature') IN ('零星维修', '报修') THEN '零星维修'
+              WHEN json_extract(properties, '$.feature') IN ('宿舍门卡', '门卡') THEN '宿舍门卡'
+              WHEN json_extract(properties, '$.feature') IN ('竞赛信息', '竞赛获奖') THEN '竞赛信息'
+              WHEN json_extract(properties, '$.feature') = '劳动俱乐部' THEN '劳动俱乐部'
+              WHEN json_extract(properties, '$.feature') = '学业分析' THEN '学业分析'
+              WHEN json_extract(properties, '$.feature') = 'auth' AND json_extract(properties, '$.action') = 'logout' THEN '退出登录'
               ELSE json_extract(properties, '$.feature')
             END
           ELSE NULL
@@ -508,7 +534,7 @@ async function recordNonce(db: D1Database, nonce: string, ttlSeconds: number): P
 
 function validatePayload(payload: EventsIn, maxEvents: number): string | null {
   if (!isString(payload.client_id, 8, 128)) return "invalid_client_id";
-  if (payload.platform !== "android" && payload.platform !== "ios") return "invalid_platform";
+  if (!["android", "ios", "desktop", "windows", "macos", "linux"].includes(payload.platform)) return "invalid_platform";
   if (!isString(payload.app_version, 1, 64)) return "invalid_app_version";
   if (payload.build != null && !isString(payload.build, 0, 64)) return "invalid_build";
   if (payload.os_version != null && !isString(payload.os_version, 0, 128)) return "invalid_os_version";

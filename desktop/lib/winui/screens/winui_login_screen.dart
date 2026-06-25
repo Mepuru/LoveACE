@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/analytics_service.dart';
 import '../../constants/app_constants.dart';
 import '../../models/aufe/user_credentials.dart';
 import '../../services/session_manager.dart';
@@ -31,6 +32,7 @@ class _WinUILoginScreenState extends State<WinUILoginScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('登录');
     _loadRememberedCredentials();
   }
 

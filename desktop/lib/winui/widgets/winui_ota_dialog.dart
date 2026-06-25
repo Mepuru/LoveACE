@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import '../../models/manifest_model.dart';
+import '../../services/analytics_service.dart';
 import '../../services/logger_service.dart';
 
 /// WinUI 风格的 OTA 更新对话框
@@ -100,7 +101,10 @@ class WinUIOTADialog extends StatelessWidget {
             child: const Text('稍后更新'),
           ),
         FilledButton(
-          onPressed: () => _copyToClipboard(context, release.url),
+          onPressed: () {
+            AnalyticsService.instance.trackOtaUpdateClick(currentVersion, release.version);
+            _copyToClipboard(context, release.url);
+          },
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
