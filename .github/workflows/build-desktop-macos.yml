@@ -137,8 +137,16 @@ jobs:
           PY
 
       - name: Build macOS release
+        env:
+          ANALYTICS_API_KEY: ${{ secrets.ANALYTICS_API_KEY }}
+          ANALYTICS_SIGNING_SECRET: ${{ secrets.ANALYTICS_SIGNING_SECRET }}
+          ANALYTICS_HASH_SALT: ${{ secrets.ANALYTICS_HASH_SALT }}
         run: |
-          flutter build macos --release --config-only
+          flutter build macos --release --config-only \
+            --dart-define=ANALYTICS_ENDPOINT=https://analyst-api.linota.cn/v1/events \
+            --dart-define=ANALYTICS_API_KEY="$ANALYTICS_API_KEY" \
+            --dart-define=ANALYTICS_SIGNING_SECRET="$ANALYTICS_SIGNING_SECRET" \
+            --dart-define=ANALYTICS_HASH_SALT="$ANALYTICS_HASH_SALT"
           xcodebuild \
             -workspace macos/Runner.xcworkspace \
             -scheme Runner \
